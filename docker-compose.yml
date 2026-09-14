@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  gridguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gridguard-ai
+    ports:
+      - "3000:80"       # Access at http://localhost:3000
+    environment:
+      - DATABASE_URL=sqlite:////app/gridguard.db
+      - BOB_AI_API_KEY=${BOB_AI_API_KEY:-bob_prod_bob-apikey_vyHVwnLb1XAdFj9jWVwMtR2nuTpb8e8WtsGYcz7hVdco3ifWcRLhcsqWyWsE9Jyga7eyWpVoecWB6qB2Fz8wnNb_EzFLmG1cZheqMYnV4vTKA3RaaMuQKvbwJWsbYut4U526}
+      - BOB_AI_API_URL=https://api.us-east.bob.ibm.com/inference/v1/chat/completions
+      - BOB_AI_MODEL=fast
+    volumes:
+      - gridguard-data:/app/data     # Persist any runtime data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  gridguard-data:

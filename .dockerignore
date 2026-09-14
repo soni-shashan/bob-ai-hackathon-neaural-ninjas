@@ -1,0 +1,36 @@
+# Git
+.git
+.github
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Python virtual environments
+**/venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+
+# Node
+**/node_modules/
+**/dist/
+
+# Database files (keep src/gridguard.db — it has seed data)
+./gridguard.db
+src/backend/gridguard.db
+
+# Documentation & presentation
+docs/
+demo/
+presentation/
+*.md
+!src/backend/requirements.txt
+
+# Misc
+.env
+.env.*
+*.db-journal
+*.sqlite3

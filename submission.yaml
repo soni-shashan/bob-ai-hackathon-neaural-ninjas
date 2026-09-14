@@ -1,69 +1,44 @@
-# =============================================================================
-# HACKATHON SUBMISSION METADATA
-# =============================================================================
-# Instructions:
-#   - Fill in ALL required fields (marked with # REQUIRED)
-#   - Optional fields can be left as empty strings ""
-#   - Do NOT rename this file — the evaluation pipeline reads it by name
-#   - Use double quotes around all string values
-# =============================================================================
+project_name: "GridGuard AI"
+tagline: "Predictive Grid Resilience & Equipment Failure Advisor"
+hackathon: "IBM Bob Hackathon"
+team_name: "Neural Ninjas"
+version: "1.0.0"
+category: "AI for Infrastructure & Grid Resilience"
 
-team:
-  name: ""                             # REQUIRED — e.g., "Orion Squad"
-  track: ""                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
-  lead:
-    name: ""                           # REQUIRED — e.g., "Alice Chen"
-    email: ""                          # REQUIRED — e.g., "alice.chen@ibm.com"
-  members:
-    - name: ""                         # REQUIRED — Team member 1
-      email: ""
-    - name: ""                         # Add more members by copying the two lines above
-      email: ""
-    - name: ""
-      email: ""
+problem_statement: >
+  High-voltage power transformers and substation equipment suffer catastrophic failures
+  leading to multi-million dollar outages and safety risks. Utilities rely on calendar-based
+  maintenance while sensor telemetry, extreme weather forecasts, and asset criticalities remain
+  siloed. GridGuard AI integrates sensor health telemetry, ML failure prediction, dynamic weather
+  risk, and crew locations to produce real-time risk prioritizations, actionable maintenance interventions,
+  and crew pre-positioning.
 
-submission:
-  title: ""                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
+key_features:
+  - "Real-time sensor telemetry anomaly detection (Temperature, Vibration, Partial Discharge, Oil Quality, Load)"
+  - "Composite Risk Engine (Equipment ML Probability + Weather Stress + Customer Impact + Criticality)"
+  - "Automated Maintenance Prioritization & Skill-Matched Crew Pre-positioning"
+  - "Dedicated TR-104 Naroda Substation Interactive Hackathon Simulation Scenario"
+  - "Enterprise Dark Industrial Grid Operations Center Dashboard"
+  - "AI Operator Advisor with Structured Evidence & Mitigation Guidance"
+  - "Pluggable ML Service Boundary ready for teammate's ML inference model"
 
-  problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
-    Replace this text with a concise description of the real-world problem
-    your project addresses and who experiences it.
+stack:
+  frontend:
+    framework: "React 18 + TypeScript"
+    bundler: "Vite"
+    styling: "Tailwind CSS (Custom Dark Industrial Grid Operations Design System)"
+    visualization: "Recharts, Interactive SVG Schematic Grid Topology"
+    icons: "Lucide React"
+  backend:
+    framework: "Python 3.12 + FastAPI"
+    database: "SQLite (SQLAlchemy ORM + Pydantic v2)"
+    architecture: "Modular Services (Risk Engine, Maintenance Optimizer, ML Bridge, AI Advisor)"
+    testing: "Pytest + HTTPX"
 
-  solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
-    Replace this text with a clear description of your solution
-    and how it addresses the problem above.
-
-  key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
-    - ""                               # e.g., "Real-time pipeline anomaly detection using watsonx.ai"
-    - ""
-    - ""
-    - ""                               # optional 4th
-    - ""                               # optional 5th
-
-  tech_stack:
-    languages: []                      # REQUIRED — e.g., ["Python", "TypeScript"]
-    frameworks: []                     # e.g., ["FastAPI", "React"]
-    ibm_technologies: []               # e.g., ["watsonx.ai", "IBM Bob", "IBM Cloud Functions"]
-    databases: []                      # e.g., ["PostgreSQL", "Redis"]
-    other: []                          # e.g., ["Docker", "GitHub Actions", "Slack API"]
-
-  what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
-    Replace with what aspect of the submission you consider strongest
-    and want judges to pay special attention to.
-
-  known_limitations: >                 # Optional but recommended — be honest about gaps
-    Replace with any known limitations, incomplete features,
-    or shortcuts taken due to time constraints.
-
-# =============================================================================
-# ARTIFACT LOCATIONS
-# These paths are relative to the repo root. Only change if you moved files.
-# =============================================================================
-artifacts:
-  source_code: "src/"
-  setup_guide: "docs/setup-guide.md"
-  architecture_doc: "docs/architecture.md"
-  demo_video: "demo/demo-video-link.txt"   # URL to hosted video (YouTube, Loom, Box)
-  live_demo: "demo/live-demo-url.txt"      # URL to deployed demo (optional)
-  screenshots: "demo/screenshots/"
-  presentation: "presentation/"
+repository_structure:
+  backend: "src/backend"
+  frontend: "src/frontend"
+  shared: "src/shared"
+  docs: "docs"
+  presentation: "presentation"
+  demo: "demo"

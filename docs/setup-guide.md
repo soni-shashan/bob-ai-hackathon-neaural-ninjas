@@ -1,79 +1,85 @@
-# Setup Guide
-
-> **This file is read by the automated evaluation pipeline. Be precise and complete.**
+# GridGuard AI — Setup & Local Execution Guide
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+- **Python**: Version 3.10+ (Tested on Python 3.12)
+- **Node.js**: Version 18+ (Tested on Node v22.12.0)
+- **npm**: Version 9+
 
-- [ ] [e.g., Python 3.11+]
-- [ ] [e.g., Node.js 18+]
-- [ ] [e.g., Docker Desktop]
-- [ ] [e.g., An IBM Cloud account with watsonx.ai access]
+---
 
-## Environment Variables
+## Step-by-Step Installation
 
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
-cp .env.example .env
+### 1. Clone the Repository
+```powershell
+git clone <repository-url>
+cd bob-ai-hackathon-neaural-ninjas
 ```
 
-| Variable | Description | Required |
-|---|---|---|
-| `WATSONX_API_KEY` | Your IBM watsonx.ai API key | Yes |
-| `WATSONX_PROJECT_ID` | Your watsonx.ai project ID | Yes |
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `SLACK_WEBHOOK_URL` | Slack webhook for alerts | No |
-
-## Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/[your-org]/[your-repo].git
-cd [your-repo]
-
-# 2. Install backend dependencies
-[your command — e.g.: pip install -r requirements.txt]
-
-# 3. Install frontend dependencies (if applicable)
-[your command — e.g.: cd frontend && npm install]
-
-# 4. Set up the database (if applicable)
-[your command — e.g.: python manage.py migrate]
+### 2. Backend Setup
+In your terminal, navigate to the backend directory and install Python dependencies:
+```powershell
+cd src/backend
+python -m pip install -r requirements.txt
 ```
 
-## Running the Application
-
-```bash
-# Start the backend
-[your command — e.g.: uvicorn app.main:app --reload]
-
-# Start the frontend (in a separate terminal, if applicable)
-[your command — e.g.: cd frontend && npm run dev]
+### 3. Frontend Setup
+In a separate terminal, navigate to the frontend directory and install npm packages:
+```powershell
+cd src/frontend
+npm install
 ```
 
-The application will be available at: `http://localhost:[PORT]`
+---
 
-## Running Tests
+## Running the Application Locally
 
-```bash
-[your test command — e.g.: pytest tests/ -v]
+### Option A: Running Services Independently
+
+**Terminal 1 — Backend (FastAPI):**
+```powershell
+cd src/backend
+$env:PYTHONPATH="."
+python -m uvicorn app.main:app --reload --port 8000
+```
+- API Health Check: `http://localhost:8000/api/health`
+- Interactive Swagger Docs: `http://localhost:8000/docs`
+
+**Terminal 2 — Frontend (Vite + React):**
+```powershell
+cd src/frontend
+npm run dev
+```
+- Web Application: `http://localhost:5173`
+
+---
+
+### Option B: Root Orchestration
+From the root workspace directory:
+```powershell
+npm run dev:backend
+# In another terminal:
+npm run dev:frontend
 ```
 
-## Quick Demo (Optional)
+---
 
-If you have a demo script or sample data to showcase the project quickly:
+## Running Automated Backend Tests
 
-```bash
-[e.g.: python demo/seed_demo_data.py]
-[e.g.: open http://localhost:8000/demo]
+To execute the backend verification test suite covering all API contracts and demo stage transitions:
+```powershell
+cd src/backend
+$env:PYTHONPATH="."
+python -m pytest tests/test_api.py -v
 ```
 
-## Troubleshooting
+---
 
-| Issue | Solution |
-|---|---|
-| [e.g., `ModuleNotFoundError`] | [e.g., Run `pip install -r requirements.txt` again] |
-| [e.g., Database connection refused] | [e.g., Ensure PostgreSQL is running: `docker compose up db`] |
-| [e.g., watsonx.ai 401 error] | [e.g., Check `WATSONX_API_KEY` in your `.env` file] |
+## Building Frontend for Production Verification
+
+```powershell
+cd src/frontend
+npm run build
+```
+
+This compiles TypeScript definitions and creates an optimized static production bundle in `src/frontend/dist`.

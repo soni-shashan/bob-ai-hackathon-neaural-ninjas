@@ -1,0 +1,19 @@
+{
+  "name": "gridguard-ai-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GridGuard AI - Predictive Grid Resilience & Equipment Failure Advisor (IBM Bob Hackathon)",
+  "scripts": {
+    "install:backend": "pip install -r src/backend/requirements.txt",
+    "install:frontend": "npm --prefix src/frontend install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "dev:backend": "python -m uvicorn app.main:app --app-dir src/backend --reload --port 8000",
+    "dev:frontend": "npm --prefix src/frontend run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "npm --prefix src/frontend run build",
+    "test:backend": "pytest src/backend/tests -v"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

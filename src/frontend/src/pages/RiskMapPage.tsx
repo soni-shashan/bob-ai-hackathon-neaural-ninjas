@@ -1,0 +1,312 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import {
+  MapPin,
+  Filter,
+  Search,
+  CloudLightning,
+  AlertTriangle,
+  Zap,
+  ChevronRight,
+  ShieldAlert,
+  Users,
+  Compass
+} from 'lucide-react';
+import { RiskBadge } from '../components/common/RiskBadge';
+import { getAssets, getDemoState } from '../services/api';
+import { AssetSummary, DemoStateResponse } from '../types';
+
+export const RiskMapPage: React.FC = () => {
+  const navigate = useNavigate();
+  const context = useOutletContext<{ refreshTrigger?: number }>();
+
+  const [assets, setAssets] = useState<AssetSummary[]>([]);
+  const [selectedAsset, setSelectedAsset] = useState<AssetSummary | null>(null);
+  const [demoState, setDemoState] = useState<DemoStateResponse | null>(null);
+  const [search, setSearch] = useState<string>('');
+  const [riskFilter, setRiskFilter] = useState<string>('ALL');
+  const [showWeatherOverlay, setShowWeatherOverlay] = useState<boolean>(true);
+
+  const fetchFleet = async () => {
+    try {
+      const [res, demo] = await Promise.all([
+        getAssets({ limit: 50 }),
+        getDemoState()
+      ]);
+      setAssets(res.items);
+      setDemoState(demo);
+
+      // Default selected asset to TR-104
+      const primary = res.items.find((a) => a.id === 'TR-104');
+      if (primary) setSelectedAsset(primary);
+    } catch (e) {
+      console.error('Failed to load risk map assets', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchFleet();
+  }, [context?.refreshTrigger]);
+
+  const filteredAssets = assets.filter((a) => {
+    const matchesSearch = !search || a.id.toLowerCase().includes(search.toLowerCase()) || a.name.toLowerCase().includes(search.toLowerCase()) || a.location.toLowerCase().includes(search.toLowerCase());
+    const matchesRisk = riskFilter === 'ALL' || a.risk_level === riskFilter;
+    return matchesSearch && matchesRisk;
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1f2d44] pb-3">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 uppercase tracking-wider mb-1">
+            <Compass className="w-3.5 h-3.5" />
+            Geospatial Grid Risk Observatory
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+            Ahmedabad Electrical Sub-Transmission Network
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Real-time geospatial overlay with live radar precipitation and asset vulnerability indexing.
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setShowWeatherOverlay(!showWeatherOverlay)}
+            className={`px-3 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors border ${
+              showWeatherOverlay
+                ? 'bg-cyan-950/80 text-cyan-300 border-cyan-700 shadow-sm'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            <CloudLightning className="w-3.5 h-3.5" />
+            Weather Radar: {showWeatherOverlay ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+
+      {/* Map Canvas with Sidebar Drawer */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
+        {/* Full-width interactive Map View (8 cols) */}
+        <div className="lg:col-span-8 bg-[#090d16] border border-[#1f2d44] rounded-lg shadow-xl relative overflow-hidden flex flex-col">
+          {/* Map Top Bar */}
+          <div className="p-3 bg-[#0d131f] border-b border-[#1f2d44] flex flex-wrap items-center justify-between gap-3 text-xs z-10">
+            <div className="flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search substation or asset..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-[#090d16] border border-slate-800 rounded px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono w-48"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 font-mono">
+              <span className="text-slate-400">Filter Risk:</span>
+              {['ALL', 'CRITICAL', 'HIGH', 'LOW'].map((lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => setRiskFilter(lvl)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    riskFilter === lvl
+                      ? 'bg-cyan-900 text-cyan-200 border border-cyan-600'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Map Visual Simulation Canvas */}
+          <div className="relative flex-1 bg-[#0a0e1a] overflow-hidden min-h-[480px]">
+            {/* Background Grid Pattern */}
+            <div
+              className="absolute inset-0 opacity-15"
+              style={{
+                backgroundImage: 'linear-gradient(#1f2d44 1px, transparent 1px), linear-gradient(90deg, #1f2d44 1px, transparent 1px)',
+                backgroundSize: '30px 30px'
+              }}
+            ></div>
+
+            {/* Weather Radar Band */}
+            {showWeatherOverlay && (
+              <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-red-950/30 via-amber-950/20 to-transparent pointer-events-none border-l border-red-500/20 flex flex-col justify-between p-4">
+                <div className="self-end px-3 py-1.5 rounded-lg bg-red-950/90 border border-red-700 text-red-200 text-xs font-mono flex items-center gap-2 shadow-lg backdrop-blur-md">
+                  <CloudLightning className="w-4 h-4 text-red-400 animate-pulse" />
+                  <div>
+                    <div className="font-bold">Severe Storm Radar Cell</div>
+                    <div className="text-[10px] text-red-300">Naroda-Vatva Corridor (48.5 mm/h)</div>
+                  </div>
+                </div>
+                <div className="text-[10px] font-mono text-slate-500 text-right">
+                  Doppler Radar Sync • Updated 2m ago
+                </div>
+              </div>
+            )}
+
+            {/* Geographical Assets Plotted on Grid */}
+            <div className="absolute inset-0 p-8">
+              {filteredAssets.map((asset) => {
+                // Approximate coordinate mapping to Ahmedabad grid bounding box:
+                // lat: 22.8 to 23.25, lon: 72.3 to 72.7
+                const latNorm = (asset.latitude - 22.8) / (23.25 - 22.8);
+                const lonNorm = (asset.longitude - 72.3) / (72.7 - 72.3);
+
+                const topPercent = Math.max(8, Math.min(90, (1 - latNorm) * 100));
+                const leftPercent = Math.max(8, Math.min(90, lonNorm * 100));
+
+                const isSelected = selectedAsset?.id === asset.id;
+                const isCritical = asset.risk_level === 'CRITICAL';
+                const isHigh = asset.risk_level === 'HIGH';
+
+                return (
+                  <div
+                    key={asset.id}
+                    onClick={() => setSelectedAsset(asset)}
+                    className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 group"
+                    style={{ top: `${topPercent}%`, left: `${leftPercent}%` }}
+                  >
+                    {/* Pulsing ring for critical assets */}
+                    {isCritical && (
+                      <span className="animate-ping absolute -inset-1 rounded-full bg-red-500 opacity-75"></span>
+                    )}
+
+                    {/* Marker Pin Icon */}
+                    <div
+                      className={`relative px-2 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border shadow-xl transition-all ${
+                        isSelected
+                          ? 'ring-2 ring-cyan-400 scale-110 z-30'
+                          : 'hover:scale-105'
+                      } ${
+                        isCritical
+                          ? 'bg-red-950 text-red-200 border-red-600'
+                          : isHigh
+                          ? 'bg-orange-950 text-orange-200 border-orange-600'
+                          : 'bg-slate-900 text-emerald-300 border-emerald-700'
+                      }`}
+                    >
+                      <MapPin className="w-3 h-3" />
+                      <span>{asset.id}</span>
+                      <span className="border-l border-current/30 pl-1 font-extrabold">
+                        {asset.risk_score}
+                      </span>
+                    </div>
+
+                    {/* Substation label below */}
+                    <div className="text-[9px] font-mono text-slate-400 whitespace-nowrap text-center mt-1 hidden group-hover:block bg-[#090d16]/90 px-1 rounded border border-slate-800">
+                      {asset.location}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Map Legend */}
+            <div className="absolute left-4 bottom-4 p-3 rounded-lg bg-[#0d131f]/90 border border-slate-800 text-xs font-mono space-y-1.5 backdrop-blur-md shadow-xl">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Risk Classification Legend
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-300">0–29: Low Operational Risk</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span className="text-slate-300">30–49: Moderate Risk</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                <span className="text-slate-300">50–84: High Alert</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                <span className="text-red-400 font-bold">85–100: Critical Intervention</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Asset Details Drawer (4 cols) */}
+        <div className="lg:col-span-4 bg-[#111827] border border-[#1f2d44] rounded-lg p-5 shadow-xl flex flex-col justify-between">
+          {selectedAsset ? (
+            <div className="space-y-4">
+              <div className="border-b border-[#1f2d44] pb-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
+                    {selectedAsset.id}
+                  </span>
+                  <RiskBadge level={selectedAsset.risk_level} score={selectedAsset.risk_score} showPulse />
+                </div>
+                <h3 className="text-base font-bold text-white font-mono mt-2">
+                  {selectedAsset.name}
+                </h3>
+                <p className="text-xs text-slate-400">{selectedAsset.location}</p>
+              </div>
+
+              {/* KPI Breakdown */}
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Failure Likelihood</span>
+                  <span className="text-rose-400 font-bold text-base">
+                    {Math.round(selectedAsset.failure_probability * 100)}%
+                  </span>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Health Score</span>
+                  <span className="text-emerald-400 font-bold text-base">
+                    {selectedAsset.health_score}/100
+                  </span>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Customers</span>
+                  <span className="text-white font-bold text-sm">
+                    {selectedAsset.customers_affected.toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Feeder Load</span>
+                  <span className="text-cyan-300 font-bold text-sm">
+                    {selectedAsset.load_mw} MW
+                  </span>
+                </div>
+              </div>
+
+              {/* Weather Status */}
+              <div className="p-3 rounded-lg bg-amber-950/20 border border-amber-800/60 text-xs space-y-1">
+                <div className="flex items-center justify-between font-mono text-amber-300 font-semibold">
+                  <span>Weather Stress: {selectedAsset.weather_risk}</span>
+                  <CloudLightning className="w-4 h-4" />
+                </div>
+                <p className="text-slate-400 text-[11px]">
+                  Located in Eastern Industrial Storm belt. Elevated lightning exposure and rainfall.
+                </p>
+              </div>
+
+              {/* Direct Action Button */}
+              <button
+                onClick={() => navigate(`/assets/${selectedAsset.id}`)}
+                className="w-full py-2.5 px-4 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-2"
+              >
+                Inspect Telemetry Diagnostics & Actions →
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-500 font-mono text-xs">
+              Select an asset marker on the map to inspect risk details.
+            </div>
+          )}
+
+          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-slate-500 flex items-center justify-between">
+            <span>Coordinates: 23.05°N, 72.67°E</span>
+            <span>SLDC Telemetry Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

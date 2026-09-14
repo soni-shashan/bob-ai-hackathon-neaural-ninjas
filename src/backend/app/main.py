@@ -1,0 +1,70 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.database.session import engine, Base, SessionLocal
+from app.seed.seed_data import seed_database
+
+# Routers
+from app.api.dashboard import router as dashboard_router
+from app.api.assets import router as assets_router
+from app.api.sensors import router as sensors_router
+from app.api.risk import router as risk_router
+from app.api.weather import router as weather_router
+from app.api.incidents import router as incidents_router
+from app.api.maintenance import router as maintenance_router
+from app.api.crews import router as crews_router
+from app.api.ml import router as ml_router
+from app.api.advisor import router as advisor_router
+from app.api.demo import router as demo_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create tables and seed data
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_database(db)
+    finally:
+        db.close()
+    yield
+    # Shutdown: Clean up resources if needed
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description="GridGuard AI - Predictive Grid Resilience & Equipment Failure Decision-Support Platform (IBM Bob Hackathon)",
+    lifespan=lifespan
+)
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Core Health Endpoint
+@app.get(f"{settings.API_PREFIX}/health", tags=["Health"])
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {
+        "status": "ok",
+        "service": "gridguard-api",
+        "version": settings.VERSION
+    }
+
+# Register API Routers
+app.include_router(dashboard_router, prefix=settings.API_PREFIX)
+app.include_router(assets_router, prefix=settings.API_PREFIX)
+app.include_router(sensors_router, prefix=settings.API_PREFIX)
+app.include_router(risk_router, prefix=settings.API_PREFIX)
+app.include_router(weather_router, prefix=settings.API_PREFIX)
+app.include_router(incidents_router, prefix=settings.API_PREFIX)
+app.include_router(maintenance_router, prefix=settings.API_PREFIX)
+app.include_router(crews_router, prefix=settings.API_PREFIX)
+app.include_router(ml_router, prefix=settings.API_PREFIX)
+app.include_router(advisor_router, prefix=settings.API_PREFIX)
+app.include_router(demo_router, prefix=settings.API_PREFIX)

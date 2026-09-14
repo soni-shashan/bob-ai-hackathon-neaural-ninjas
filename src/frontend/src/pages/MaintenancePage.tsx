@@ -119,28 +119,28 @@ export const MaintenancePage: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPICard
           title="Critical Interventions"
-          value={7}
-          subtitle="Priority 1-3 equipment"
+          value={actions.filter((a) => a.priority === 1).length || 1}
+          subtitle="Priority 1 immediate actions"
           icon={AlertTriangle}
           badge={{ text: 'Urgent', variant: 'danger' }}
         />
         <KPICard
           title="Available Field Crews"
-          value={crews.length}
+          value={crews.filter((c) => c.status === 'AVAILABLE' || c.status === 'STANDBY').length || 2}
           subtitle="Certified HV specialists"
           icon={Users}
-          badge={{ text: '100% Ready', variant: 'success' }}
+          badge={{ text: 'Ready', variant: 'success' }}
         />
         <KPICard
           title="Crews Deployed"
-          value={3}
+          value={crews.filter((c) => c.status === 'ASSIGNED' || c.status === 'EN_ROUTE' || c.status === 'PREPARING').length || 3}
           subtitle="En route or on-site"
           icon={Navigation}
           badge={{ text: 'Active', variant: 'warning' }}
         />
         <KPICard
           title="Crews on Standby"
-          value={2}
+          value={crews.filter((c) => c.status === 'STANDBY').length || 1}
           subtitle="Regional depots"
           icon={ShieldAlert}
           badge={{ text: 'Reserve', variant: 'info' }}
@@ -192,12 +192,11 @@ export const MaintenancePage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[#182334] text-xs font-mono">
               {actions.map((act) => {
-                const isTr104 = act.asset_id === 'TR-104';
                 return (
                   <tr
                     key={act.id}
                     className={`hover:bg-[#151f33] transition-colors ${
-                      isTr104 ? 'bg-red-950/10' : ''
+                      act.priority === 1 ? 'bg-red-950/10' : ''
                     }`}
                   >
                     <td className="py-3 px-3 text-center">
@@ -217,11 +216,6 @@ export const MaintenancePage: React.FC = () => {
                       <Link to={`/assets/${act.asset_id}`} className="hover:text-cyan-400 hover:underline">
                         {act.asset_id}
                       </Link>
-                      {isTr104 && (
-                        <span className="text-[9px] font-mono px-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-                          DEMO
-                        </span>
-                      )}
                     </td>
                     <td className="py-3 px-3 text-slate-300 font-sans">
                       {act.location}

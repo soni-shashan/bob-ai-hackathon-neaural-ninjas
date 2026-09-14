@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { RiskBadge } from '../components/common/RiskBadge';
 import { LoadingSpinner, ErrorMessage } from '../components/common/LoadingSpinner';
-import { getAssets, getDemoState, createAsset } from '../services/api';
+import { getAssets, createAsset } from '../services/api';
 import { AssetSummary, AssetListResponse } from '../types';
 
 export const AssetsPage: React.FC = () => {
@@ -186,10 +186,10 @@ export const AssetsPage: React.FC = () => {
               className="w-full bg-[#0b0f17] border border-[#1f2d44] rounded-md px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
             >
               <option value="ALL">All Risk Levels</option>
-              <option value="CRITICAL">Critical (85-100)</option>
-              <option value="HIGH">High (50-84)</option>
-              <option value="MODERATE">Moderate (30-49)</option>
-              <option value="LOW">Low (0-29)</option>
+              <option value="CRITICAL">Critical (≥ 75)</option>
+              <option value="HIGH">High (50-74)</option>
+              <option value="MEDIUM">Medium (25-49)</option>
+              <option value="LOW">Low (&lt; 25)</option>
             </select>
           </div>
 
@@ -223,15 +223,16 @@ export const AssetsPage: React.FC = () => {
               className="w-full bg-[#0b0f17] border border-[#1f2d44] rounded-md px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
             >
               <option value="ALL">All Substations</option>
-              <option value="Naroda">Naroda Substation</option>
-              <option value="Vatva">Vatva Substation</option>
-              <option value="Odhav">Odhav Substation</option>
-              <option value="Gandhinagar">Gandhinagar Substation</option>
-              <option value="Sabarmati">Sabarmati Substation</option>
-              <option value="Thaltej">Thaltej Substation</option>
-              <option value="Sanand">Sanand Substation</option>
-              <option value="Bopal">Bopal Substation</option>
-              <option value="Changodar">Changodar Substation</option>
+              <option value="East Transmission">East Transmission Substation</option>
+              <option value="East Industrial">East Industrial Substation</option>
+              <option value="East Distribution">East Distribution Substation</option>
+              <option value="Central Core">Central Core Substation</option>
+              <option value="North Intertie">North Intertie Substation</option>
+              <option value="North Regional">North Regional Substation</option>
+              <option value="West Primary">West Primary Substation</option>
+              <option value="West Distribution">West Distribution Substation</option>
+              <option value="South Industrial">South Industrial Substation</option>
+              <option value="South Logistics">South Logistics Substation</option>
             </select>
           </div>
 
@@ -285,8 +286,6 @@ export const AssetsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-[#182334] text-xs font-mono">
                 {assets.map((asset) => {
-                  const isDemo = asset.id === 'TR-104';
-
                   return (
                     <tr
                       key={asset.id}
@@ -295,11 +294,6 @@ export const AssetsPage: React.FC = () => {
                     >
                       <td className="py-3 px-4 font-bold text-white group-hover:text-cyan-400 flex items-center gap-2">
                         {asset.id}
-                        {isDemo && (
-                          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-                            DEMO
-                          </span>
-                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-200 font-sans max-w-[180px] truncate">
                         {asset.name}
@@ -348,7 +342,7 @@ export const AssetsPage: React.FC = () => {
                           className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
                             asset.weather_risk === 'HIGH'
                               ? 'bg-red-950/60 text-red-300 border-red-800'
-                              : asset.weather_risk === 'MODERATE'
+                              : asset.weather_risk === 'MEDIUM' || asset.weather_risk === 'MODERATE'
                               ? 'bg-amber-950/60 text-amber-300 border-amber-800'
                               : 'bg-slate-800 text-slate-400 border-slate-700'
                           }`}

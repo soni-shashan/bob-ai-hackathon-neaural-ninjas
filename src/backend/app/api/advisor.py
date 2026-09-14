@@ -8,4 +8,4 @@ router = APIRouter(prefix="/advisor", tags=["AI Advisor"])
 
 @router.post("/query", response_model=AdvisorQueryResponse)
 def query_grid_advisor(req: AdvisorQueryRequest, db: Session = Depends(get_db)):
-    return advisor_service.answer_query(db, req.question, req.asset_id)
+    return advisor_service.answer_query(db, req.question, req.asset_id, req.history)

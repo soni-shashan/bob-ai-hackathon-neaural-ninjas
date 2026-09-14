@@ -13,14 +13,19 @@ class RiskEngine:
 
     @staticmethod
     def calculate_risk_level(score: float) -> str:
-        if score <= settings.RISK_THRESHOLD_LOW:
+        """
+        Risk classification matching GridGuard_AI_Final.ipynb:
+          - Low: < 25.0
+          - Medium: 25.0 to 49.9
+          - High: 50.0 to 74.9
+          - Critical: >= 75.0
+        """
+        if score < settings.RISK_THRESHOLD_LOW:
             return "LOW"
-        elif score <= settings.RISK_THRESHOLD_MODERATE:
-            return "MODERATE"
-        elif score <= settings.RISK_THRESHOLD_HIGH:
+        elif score < settings.RISK_THRESHOLD_MEDIUM:
+            return "MEDIUM"
+        elif score < settings.RISK_THRESHOLD_HIGH:
             return "HIGH"
-        elif score <= settings.RISK_THRESHOLD_VERY_HIGH:
-            return "VERY_HIGH"
         else:
             return "CRITICAL"
 

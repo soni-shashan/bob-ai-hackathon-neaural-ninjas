@@ -8,7 +8,7 @@ class CrewService:
     """
     Crew Management and Pre-positioning Service.
     Calculates proximity, travel times, and recommends crew pre-positioning
-    based on asset criticalities and extreme weather threats.
+    based on asset criticalities and extreme weather threats in the regional grid.
     """
 
     @staticmethod
@@ -46,24 +46,24 @@ class CrewService:
 
             # Pre-positioning logic for Crew 2 (highlighted in scenario)
             if c.id == "CREW-02":
-                res.recommended_position = "10 km from Naroda Substation (Eastern Perimeter)"
-                res.recommended_reason = "High probability of power transformer failure (TR-104) combined with severe weather alert."
+                res.recommended_position = "10 km from East Transmission Substation"
+                res.recommended_reason = "High probability of power transformer failure (TR-104 / TX-DIST-01) combined with severe weather alert."
                 res.eta_minutes = 18
             elif c.id == "CREW-01":
-                res.recommended_position = "Vatva Industrial Feeder Substation"
+                res.recommended_position = "East Industrial Substation"
                 res.recommended_reason = "Preventive maintenance for high-load feeder breaker TR-087."
                 res.eta_minutes = 26
             elif c.id == "CREW-03":
-                res.recommended_position = "Odhav East Substation Yard"
+                res.recommended_position = "East Distribution Substation Yard"
                 res.recommended_reason = "Equipment standby for backup transformer line transfer."
                 res.eta_minutes = 34
             elif c.id == "CREW-04":
-                res.recommended_position = "Gandhinagar Northern Ring"
+                res.recommended_position = "North Regional Substation Ring"
                 res.recommended_reason = "Monitoring high-wind corridor transmission lines."
                 res.eta_minutes = 45
             else:
-                res.recommended_position = "Ahmedabad Central Staging Depot"
-                res.recommended_reason = "Emergency reserve crew with mobile mobile substation trailer."
+                res.recommended_position = "Central Operations Hub Staging Depot"
+                res.recommended_reason = "Emergency reserve crew with mobile substation trailer."
                 res.eta_minutes = 12
 
             results.append(res)

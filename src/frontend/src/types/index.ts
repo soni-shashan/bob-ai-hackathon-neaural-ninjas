@@ -1,6 +1,6 @@
 // Frontend Types for GridGuard AI
 
-export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH' | 'CRITICAL';
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'MODERATE' | 'HIGH' | 'VERY_HIGH' | 'CRITICAL';
 
 export type AssetType = 
   | 'Power Transformer'
@@ -70,13 +70,29 @@ export interface RiskAnalysisResponse {
   estimated_failure_window: string;
 }
 
+export interface RiskTierStat {
+  count: number;
+  percentage: number;
+}
+
+export interface RiskDistribution {
+  critical: RiskTierStat;
+  high: RiskTierStat;
+  medium: RiskTierStat;
+  low: RiskTierStat;
+}
+
 export interface DashboardSummary {
   total_assets: number;
   critical_assets: number;
   high_risk_assets: number;
+  medium_risk_assets?: number;
+  low_risk_assets?: number;
   customers_at_risk: number;
   active_weather_alerts: number;
   grid_health_score: number;
+  normal_baseline_score?: number;
+  risk_distribution?: RiskDistribution;
   last_updated: string;
 }
 
@@ -177,16 +193,31 @@ export interface MaintenancePlanResponse {
   actions: MaintenanceActionItem[];
 }
 
+export interface MLPredictFeatures {
+  temperature: number;
+  vibration: number;
+  partial_discharge: number;
+  oil_quality: number;
+  load: number;
+  ambient_temperature?: number;
+  oti?: number;
+  wti?: number;
+  ati?: number;
+  oli?: number;
+  oti_a?: number;
+  oti_t?: number;
+  vl1?: number;
+  vl2?: number;
+  vl3?: number;
+  il1?: number;
+  il2?: number;
+  il3?: number;
+  inut?: number;
+}
+
 export interface MLPredictRequest {
   asset_id: string;
-  features: {
-    temperature: number;
-    vibration: number;
-    partial_discharge: number;
-    oil_quality: number;
-    load: number;
-    ambient_temperature?: number;
-  };
+  features: MLPredictFeatures;
 }
 
 export interface MLPredictResponse {
@@ -194,6 +225,37 @@ export interface MLPredictResponse {
   failure_probability: number;
   prediction: string;
   model_version: string;
+  health_score?: number;
+  health_category?: string;
+  is_anomaly?: boolean;
+  decision_score?: number;
+  normalized_anomaly_risk?: number;
+  dominant_risk_factor?: string;
+  risk_reason?: string;
+  recommended_action?: string;
+  equipment_risk_score?: number;
+  mog_probability?: number;
+  penalties?: {
+    thermal_penalty?: number;
+    oil_alarm_penalty?: number;
+    electrical_penalty?: number;
+    partial_discharge_penalty?: number;
+    vibration_penalty?: number;
+  };
+}
+
+export interface MLModelInfo {
+  model_name: string;
+  version: string;
+  architecture: string;
+  features: string[];
+  weights: Record<string, number>;
+  status: string;
+}
+
+export interface ChatHistoryItem {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export interface AdvisorQueryResponse {
@@ -203,6 +265,7 @@ export interface AdvisorQueryResponse {
   recommended_actions: string[];
   expected_impact?: string;
   related_asset_id?: string;
+  model_name?: string;
 }
 
 export type DemoStage = 'baseline' | 'degradation' | 'critical';
@@ -216,3 +279,24 @@ export interface DemoStateResponse {
   stage_description: string;
   last_updated: string;
 }
+
+export interface NasaPowerObservation {
+  source: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  temperature_c: number;
+  humidity_pct: number;
+  wind_speed_ms: number;
+  precipitation_mm: number;
+  surface_pressure_kpa: number;
+  dew_point_c: number;
+}
+
+export interface NasaPowerLiveResponse {
+  status: string;
+  source: string;
+  message?: string;
+  data?: NasaPowerObservation;
+}
+

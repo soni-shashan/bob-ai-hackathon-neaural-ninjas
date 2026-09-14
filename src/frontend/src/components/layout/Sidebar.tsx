@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,13 +15,14 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getDashboardSummary } from '../../services/api';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { path: '/assets', label: 'Grid Assets', icon: Cpu, badge: '248' },
+  { path: '/assets', label: 'Grid Assets', icon: Cpu },
   { path: '/risk-map', label: 'Risk Map', icon: MapPin },
-  { path: '/maintenance', label: 'Maintenance', icon: Wrench, badge: '7 Due', badgeVariant: 'danger' },
-  { path: '/weather', label: 'Weather Intel', icon: CloudLightning, badge: '3 Alerts', badgeVariant: 'warning' },
+  { path: '/maintenance', label: 'Maintenance', icon: Wrench, badge: 'Active', badgeVariant: 'danger' },
+  { path: '/weather', label: 'Weather Intel', icon: CloudLightning, badge: 'Live', badgeVariant: 'warning' },
   { path: '/incidents', label: 'Incidents Log', icon: History },
   { path: '/advisor', label: 'AI Advisor', icon: Bot, badge: 'Live', badgeVariant: 'cyan' },
 ];
@@ -30,6 +31,28 @@ export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [gridHealth, setGridHealth] = useState<number>(71);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHealth = async () => {
+      try {
+        const summary = await getDashboardSummary();
+        if (isMounted && summary && typeof summary.grid_health_score === 'number') {
+          setGridHealth(summary.grid_health_score);
+        }
+      } catch {
+        // Fallback silently if offline or initial load
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const confirmLogout = () => {
     logout();
@@ -132,13 +155,16 @@ export const Sidebar: React.FC = () => {
         </div>
         <div className="text-[11px] text-slate-400 flex items-center justify-between font-mono">
           <span>Health Index</span>
-          <span className="text-white font-bold">78/100</span>
+          <span className="text-white font-bold">{gridHealth}/100</span>
         </div>
         <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full w-[78%]"></div>
+          <div
+            className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full transition-all duration-500"
+            style={{ width: `${Math.min(100, Math.max(0, gridHealth))}%` }}
+          />
         </div>
         <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-          <span>IBM Bob Hackathon</span>
+          <span>GridGuard AI</span>
           <span className="font-mono text-cyan-400">v1.0.0</span>
         </div>
       </div>

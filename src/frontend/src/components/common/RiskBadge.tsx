@@ -25,9 +25,11 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({
       bgClass = 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60';
       dotClass = 'bg-emerald-400';
       break;
+    case 'MEDIUM':
     case 'MODERATE':
       bgClass = 'bg-amber-950/40 text-amber-300 border-amber-800/60';
       dotClass = 'bg-amber-400';
+      textLabel = 'MEDIUM';
       break;
     case 'HIGH':
       bgClass = 'bg-orange-950/40 text-orange-300 border-orange-800/60';

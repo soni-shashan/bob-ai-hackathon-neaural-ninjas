@@ -47,8 +47,8 @@ class AssetCreate(BaseModel):
     type: Optional[str] = "Power Transformer"
     location: str
     grid_zone: Optional[str] = "East Grid"
-    latitude: Optional[float] = 23.05
-    longitude: Optional[float] = 72.65
+    latitude: Optional[float] = 28.6139
+    longitude: Optional[float] = 77.2090
     capacity_mva: Optional[float] = 50.0
     load_mw: Optional[float] = 30.0
     criticality_score: Optional[int] = 70
@@ -75,13 +75,27 @@ class RiskAnalysisResponse(BaseModel):
     base_equipment_risk: int
     estimated_failure_window: str
 
+class RiskTierStat(BaseModel):
+    count: int
+    percentage: float
+
+class RiskDistribution(BaseModel):
+    critical: RiskTierStat
+    high: RiskTierStat
+    medium: RiskTierStat
+    low: RiskTierStat
+
 class DashboardSummaryResponse(BaseModel):
     total_assets: int
     critical_assets: int
     high_risk_assets: int
+    medium_risk_assets: int = 0
+    low_risk_assets: int = 0
     customers_at_risk: int
     active_weather_alerts: int
     grid_health_score: int
+    normal_baseline_score: int = 78
+    risk_distribution: Optional[RiskDistribution] = None
     last_updated: str
 
 class RiskTrendPoint(BaseModel):
@@ -189,6 +203,21 @@ class MLPredictFeatures(BaseModel):
     load: float
     ambient_temperature: Optional[float] = 32.0
 
+    # Optional detailed IEEE C57.91 transformer telemetry fields
+    oti: Optional[float] = None
+    wti: Optional[float] = None
+    ati: Optional[float] = None
+    oli: Optional[float] = None
+    oti_a: Optional[float] = 0.0
+    oti_t: Optional[float] = 0.0
+    vl1: Optional[float] = 240.0
+    vl2: Optional[float] = 240.0
+    vl3: Optional[float] = 240.0
+    il1: Optional[float] = None
+    il2: Optional[float] = None
+    il3: Optional[float] = None
+    inut: Optional[float] = 0.0
+
 class MLPredictRequest(BaseModel):
     asset_id: str
     features: MLPredictFeatures
@@ -199,17 +228,44 @@ class MLPredictResponse(BaseModel):
     prediction: str
     model_version: str
 
+    # Extended diagnostic insights (Optional for full backwards compatibility)
+    health_score: Optional[float] = None
+    health_category: Optional[str] = None
+    is_anomaly: Optional[bool] = None
+    decision_score: Optional[float] = None
+    normalized_anomaly_risk: Optional[float] = None
+    dominant_risk_factor: Optional[str] = None
+    risk_reason: Optional[str] = None
+    recommended_action: Optional[str] = None
+    equipment_risk_score: Optional[float] = None
+    mog_probability: Optional[float] = None
+    penalties: Optional[Dict[str, float]] = None
+
+class MLModelInfoResponse(BaseModel):
+    model_name: str
+    version: str
+    architecture: str
+    features: List[str]
+    weights: Dict[str, float]
+    status: str
+
+class ChatMessagePayload(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
 class AdvisorQueryRequest(BaseModel):
     question: str
     asset_id: Optional[str] = None
+    history: Optional[List[ChatMessagePayload]] = None
 
 class AdvisorQueryResponse(BaseModel):
     answer: str
-    priority: str
-    evidence: List[str]
-    recommended_actions: List[str]
+    priority: str = "MEDIUM"
+    evidence: List[str] = []
+    recommended_actions: List[str] = []
     expected_impact: Optional[str] = None
     related_asset_id: Optional[str] = None
+    model_name: Optional[str] = "ibm-bob-ai/fast"
 
 class DemoSetStageRequest(BaseModel):
     stage: str # 'baseline', 'degradation', 'critical'

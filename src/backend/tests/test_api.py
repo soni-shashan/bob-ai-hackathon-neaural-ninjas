@@ -5,6 +5,13 @@ from app.main import app
 @pytest.fixture(scope="module")
 def client():
     with TestClient(app) as c:
+        login_res = c.post("/api/auth/login", json={
+            "email": "neaural.ninjas@electricity.com",
+            "password": "Admin@123"
+        })
+        if login_res.status_code == 200:
+            token = login_res.json().get("access_token")
+            c.headers["Authorization"] = f"Bearer {token}"
         yield c
 
 def test_health_endpoint(client):
@@ -37,7 +44,7 @@ def test_get_single_asset_tr104(client):
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == "TR-104"
-    assert "Naroda" in data["location"]
+    assert "Substation" in data["location"]
     assert "risk_score" in data
     assert "failure_probability" in data
 
@@ -112,6 +119,21 @@ def test_ai_advisor_query(client):
     assert data["priority"] == "CRITICAL"
     assert len(data["evidence"]) > 0
     assert len(data["recommended_actions"]) > 0
+    assert "model_name" in data
+
+def test_ai_advisor_conversational_history(client):
+    response = client.post("/api/advisor/query", json={
+        "question": "What actions should the operator take first?",
+        "history": [
+            {"role": "user", "content": "Which asset requires immediate attention?"},
+            {"role": "assistant", "content": "TR-104 at East Transmission Substation requires immediate attention due to 82% failure probability."}
+        ]
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["answer"]) > 0
+    assert len(data["recommended_actions"]) > 0 or len(data["evidence"]) > 0
+
 
 def test_demo_stage_transition(client):
     # Set to baseline
@@ -150,15 +172,56 @@ def test_create_and_track_new_transformer(client):
         "criticality_score": 75,
         "customers_affected": 9500
     }
-    response = client.post("/api/assets", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == test_id
-    assert data["location"] == "Maninagar Substation"
-    assert data["status"] == "OPERATIONAL"
+    try:
+        response = client.post("/api/assets", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == test_id
+        assert data["location"] == "Maninagar Substation"
+        assert data["status"] == "OPERATIONAL"
 
-    # Verify that sensors were automatically initialized
-    sensors_res = client.get(f"/api/assets/{test_id}/sensors")
-    assert sensors_res.status_code == 200
-    assert len(sensors_res.json()["temperature"]) == 100
+        # Verify that sensors were automatically initialized
+        sensors_res = client.get(f"/api/assets/{test_id}/sensors")
+        assert sensors_res.status_code == 200
+        assert len(sensors_res.json()["temperature"]) == 100
+    finally:
+        from app.database.session import SessionLocal
+        from app.models.models import Asset, SensorReading, MaintenanceAction
+        cleanup_db = SessionLocal()
+        try:
+            cleanup_db.query(SensorReading).filter(SensorReading.asset_id == test_id).delete()
+            cleanup_db.query(MaintenanceAction).filter(MaintenanceAction.asset_id == test_id).delete()
+            cleanup_db.query(Asset).filter(Asset.id == test_id).delete()
+            cleanup_db.commit()
+        finally:
+            cleanup_db.close()
+
+def test_nasa_power_weather_endpoints(client):
+    res_curr = client.get("/api/weather/current")
+    assert res_curr.status_code == 200
+    assert len(res_curr.json()) == 5
+    assert any(z["zone"] == "east" for z in res_curr.json())
+
+    res_live = client.get("/api/weather/nasa-power-live")
+    assert res_live.status_code == 200
+    data = res_live.json()
+    assert data["status"] in ["ok", "cached"]
+    assert "data" in data or "message" in data
+
+def test_sensor_telemetry_live_dataset(client):
+    # Fetch TR-104 sensors
+    res = client.get("/api/assets/TR-104/sensors")
+    assert res.status_code == 200
+    d = res.json()
+    assert d["asset_id"] == "TR-104"
+    assert len(d["temperature"]) == 100
+    assert len(d["vibration"]) == 100
+    assert len(d["partial_discharge"]) == 100
+    assert len(d["oil_quality"]) == 100
+    assert len(d["load"]) == 100
+    # Values should be within physical limits
+    assert all(0.0 <= pt["value"] <= 200.0 for pt in d["temperature"])
+    assert all(0.0 <= pt["value"] <= 20.0 for pt in d["vibration"])
+    assert all(0.0 <= pt["value"] <= 100.0 for pt in d["partial_discharge"])
+
 

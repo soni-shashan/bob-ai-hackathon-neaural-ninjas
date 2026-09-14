@@ -1,0 +1,21 @@
+{
+  "api_source": "NASA POWER Hourly Temporal API (v2.10.0)",
+  "endpoint": "https://power.larc.nasa.gov/api/temporal/hourly/point",
+  "community": "RE",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "start_date": "20190625",
+  "end_date": "20200414",
+  "parameters": [
+    "T2M",
+    "RH2M",
+    "WS10M",
+    "WD10M",
+    "PRECTOTCORR",
+    "PS",
+    "T2MDEW"
+  ],
+  "retrieval_timestamp": "2026-09-13 16:40:29",
+  "time_standard": "LST (Local Solar Time)",
+  "total_records": 7080
+}

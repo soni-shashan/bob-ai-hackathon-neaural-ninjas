@@ -96,7 +96,7 @@ class Crew(Base):
     id = Column(String(50), primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     status = Column(String(20), default="AVAILABLE") # AVAILABLE, ASSIGNED, STANDBY, EN_ROUTE
-    depot_name = Column(String(100), default="Ahmedabad Central Depot")
+    depot_name = Column(String(100), default="Regional Central Depot")
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     skills = Column(JSON, default=list)

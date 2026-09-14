@@ -44,10 +44,10 @@ export const DemoScenarioBar: React.FC<{ onStageChange?: () => void }> = ({ onSt
         <div className="flex items-center gap-2.5">
           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800 text-cyan-300 font-mono font-semibold uppercase tracking-wider text-[11px]">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            Hackathon Demo Simulator
+            Live Scenario Control Stream
           </span>
           <span className="text-slate-300 hidden md:inline">
-            Active Asset: <strong className="text-white font-mono">TR-104 (Naroda Substation)</strong>
+            Active Asset: <strong className="text-white font-mono">TR-104 (TX-DIST-01 • East Transmission Substation)</strong>
           </span>
         </div>
 

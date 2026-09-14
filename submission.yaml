@@ -1,44 +1,57 @@
-project_name: "GridGuard AI"
-tagline: "Predictive Grid Resilience & Equipment Failure Advisor"
-hackathon: "IBM Bob Hackathon"
-team_name: "Neural Ninjas"
-version: "1.0.0"
-category: "AI for Infrastructure & Grid Resilience"
 
-problem_statement: >
-  High-voltage power transformers and substation equipment suffer catastrophic failures
-  leading to multi-million dollar outages and safety risks. Utilities rely on calendar-based
-  maintenance while sensor telemetry, extreme weather forecasts, and asset criticalities remain
-  siloed. GridGuard AI integrates sensor health telemetry, ML failure prediction, dynamic weather
-  risk, and crew locations to produce real-time risk prioritizations, actionable maintenance interventions,
-  and crew pre-positioning.
+team:
+  name: "Neural Ninjas"                # REQUIRED — e.g., "Orion Squad"
+  track: "AI"                          # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  lead:
+    name: "Shashan Lumbhani"           # REQUIRED — e.g., "Alice Chen"
+    email: "23cs042@charusat.edu.in"   # REQUIRED — e.g., "alice.chen@ibm.com"
+  members:
+    - name: "Nikhil Vaghela"           # REQUIRED — Team member 1
+      email: "23dce124@charusat.edu.in"
+    - name: "Vinay Trivedi"            # Team member 2
+      email: "23it134@charusat.edu.in"
+    - name: "Het Prajapati"            # Team member 3
+      email: "23dce100@charusat.edu.in"
 
-key_features:
-  - "Real-time sensor telemetry anomaly detection (Temperature, Vibration, Partial Discharge, Oil Quality, Load)"
-  - "Composite Risk Engine (Equipment ML Probability + Weather Stress + Customer Impact + Criticality)"
-  - "Automated Maintenance Prioritization & Skill-Matched Crew Pre-positioning"
-  - "Dedicated TR-104 Naroda Substation Interactive Hackathon Simulation Scenario"
-  - "Enterprise Dark Industrial Grid Operations Center Dashboard"
-  - "AI Operator Advisor with Structured Evidence & Mitigation Guidance"
-  - "Pluggable ML Service Boundary ready for teammate's ML inference model"
+submission:
+  title: "GridGuard AI"                # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
 
-stack:
-  frontend:
-    framework: "React 18 + TypeScript"
-    bundler: "Vite"
-    styling: "Tailwind CSS (Custom Dark Industrial Grid Operations Design System)"
-    visualization: "Recharts, Interactive SVG Schematic Grid Topology"
-    icons: "Lucide React"
-  backend:
-    framework: "Python 3.12 + FastAPI"
-    database: "SQLite (SQLAlchemy ORM + Pydantic v2)"
-    architecture: "Modular Services (Risk Engine, Maintenance Optimizer, ML Bridge, AI Advisor)"
-    testing: "Pytest + HTTPX"
+  problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
+    Power transformer and substation failures cause blackouts costing utilities $1M+/hour and affecting millions of people. Most utilities still use calendar-based maintenance, while sensors already measuring temperature, vibration, partial discharge, and oil quality show failure signatures weeks in advance. Weather events compound the risk — but sensor data and weather forecasts are never combined in time to act.
 
-repository_structure:
-  backend: "src/backend"
-  frontend: "src/frontend"
-  shared: "src/shared"
-  docs: "docs"
-  presentation: "presentation"
-  demo: "demo"
+  solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
+    GridGuard AI is a real-time predictive grid resilience and equipment failure decision-support platform. It fuses live high-voltage SCADA telemetry, IEEE C57.91 physics health scoring, Isolation Forest and ExtraTrees ML anomaly detection, and NASA POWER weather forecasts with IBM Bob AI conversational reasoning to predict equipment failures, evaluate composite outage risk, and automate prioritized maintenance schedules and crew pre-positioning.
+
+  key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
+    - "Real-time Multi-Modal SCADA Telemetry & IEEE C57.91 Physics Health Scoring"
+    - "Condition-Aware Isolation Forest & ExtraTrees ML Failure Anomaly Detection Engine"
+    - "NASA POWER Satellite Live Weather Integration & Bounded Storm Stress Interaction Engine"
+    - "Dynamic Outage Avoidance & Equipment Failure Risk Prioritization with Substation Deduplication"
+    - "Real-Time AI Operations Advisor Chatbot Powered by IBM Bob AI API (Granite/fast)"
+    - "Automated Skill-Matched Maintenance Optimizer & Emergency Crew Pre-Positioning Dispatcher"
+
+  tech_stack:
+    languages: ["Python", "TypeScript", "JavaScript", "SQL", "HTML/CSS"]
+    frameworks: ["FastAPI", "React 18", "Vite", "Tailwind CSS", "Scikit-learn"]
+    ibm_technologies: ["IBM Bob AI API", "IBM Granite"]
+    databases: ["SQLite", "SQLAlchemy"]
+    other: ["Leaflet", "Recharts", "Pytest", "NASA POWER API", "Uvicorn"]
+
+  what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
+    Integrating authentic high-voltage electrical grid sensor telemetry and trained scikit-learn anomaly detection models with IBM Bob AI real-time LLM reasoning to give grid dispatchers actionable failure predictions, live schematic grid topology, and automated crew dispatching before storm-induced equipment failures occur.
+
+  known_limitations: >                 # Optional but recommended — be honest about gaps
+    Currently calibrated and validated for regional transmission and distribution grid topologies with 26 high-voltage monitored assets. Continental-scale deployment will incorporate distributed event streaming pipelines via Apache Kafka.
+
+# =============================================================================
+# ARTIFACT LOCATIONS
+# These paths are relative to the repo root. Only change if you moved files.
+# =============================================================================
+artifacts:
+  source_code: "src/"
+  setup_guide: "docs/setup-guide.md"
+  architecture_doc: "docs/architecture.md"
+  demo_video: "demo/demo-video-link.txt"   # URL to hosted video (YouTube, Loom, Box)
+  live_demo: "demo/live-demo-url.txt"      # URL to deployed demo (optional)
+  screenshots: "demo/screenshots/"
+  presentation: "presentation/"

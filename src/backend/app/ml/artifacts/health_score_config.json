@@ -1,0 +1,27 @@
+{
+  "engine": "IEEE C57.91-inspired Physics Health Score",
+  "max_score": 100.0,
+  "penalties": {
+    "thermal_max": 35.0,
+    "oil_alarm_max": 35.0,
+    "electrical_max": 30.0
+  },
+  "categories": {
+    "Healthy": [
+      80.0,
+      100.0
+    ],
+    "Normal": [
+      60.0,
+      79.9
+    ],
+    "Warning": [
+      40.0,
+      59.9
+    ],
+    "Critical": [
+      0.0,
+      39.9
+    ]
+  }
+}

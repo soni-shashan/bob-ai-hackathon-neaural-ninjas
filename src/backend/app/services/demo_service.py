@@ -2,13 +2,14 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.models import Asset, SensorReading, MaintenanceAction, DemoScenarioState
 from app.schemas.schemas import DemoStateResponse
+from app.services.dataset_feed_service import dataset_feed_service
 
 class DemoService:
     """
-    Demo Scenario Controller for Hackathon Demonstrations.
-    Manages the live simulated evolution of Transformer TR-104 at Naroda Substation
+    Operational Scenario Controller.
+    Manages the live simulated evolution of Transformer TR-104 (TX-DIST-01) at East Transmission Substation
     across three distinct operational stages:
-      1. 'baseline'    -> Risk: 42, Status: Moderate, Normal Operations
+      1. 'baseline'    -> Risk: 42, Status: Medium, Normal Operations
       2. 'degradation' -> Risk: 68, Status: High, Thermal & Vibration Warning
       3. 'critical'    -> Risk: 94, Status: Critical, Severe Storm & Immediate Failure Threat
     """
@@ -62,28 +63,42 @@ class DemoService:
             state_row.current_stage = stage
             state_row.last_updated = datetime.now(timezone.utc).isoformat()
 
+        # Update TR-104 sensor readings directly from real dataset slice
+        slice_df = dataset_feed_service.get_stage_slice(stage, count=100)
+        readings = []
+        if not slice_df.empty:
+            db.query(SensorReading).filter(SensorReading.asset_id == "TR-104").delete()
+            readings = dataset_feed_service.convert_slice_to_readings(slice_df, "TR-104")
+            db.bulk_save_objects([SensorReading(**r) for r in readings])
+
         # Update TR-104 record in DB
         asset = db.query(Asset).filter(Asset.id == "TR-104").first()
         action = db.query(MaintenanceAction).filter(MaintenanceAction.asset_id == "TR-104").first()
 
         if asset:
             if stage == "baseline":
-                asset.health_score = 42 # Represents risk score in API mapping
+                asset.health_score = 78
                 asset.status = "OPERATIONAL"
+                if readings:
+                    asset.load_mw = readings[-1]["load"]
                 if action:
                     action.priority = 4
                     action.action = "Routine Oil Sampling & Diagnostic Scan"
                     action.status = "PENDING"
             elif stage == "degradation":
-                asset.health_score = 68
+                asset.health_score = 55
                 asset.status = "WARNING"
+                if readings:
+                    asset.load_mw = readings[-1]["load"]
                 if action:
                     action.priority = 2
                     action.action = "Thermal & Vibration Inspection Overhaul"
                     action.status = "PREPARING"
             else: # critical
-                asset.health_score = 94
+                asset.health_score = 30
                 asset.status = "CRITICAL"
+                if readings:
+                    asset.load_mw = readings[-1]["load"]
                 if action:
                     action.priority = 1
                     action.action = "Immediate Emergency Inspection & Crew Pre-positioning"

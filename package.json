@@ -7,11 +7,11 @@
     "install:backend": "pip install -r src/backend/requirements.txt",
     "install:frontend": "npm --prefix src/frontend install",
     "install:all": "npm run install:backend && npm run install:frontend",
-    "dev:backend": "python -m uvicorn app.main:app --app-dir src/backend --reload --port 8000",
+    "dev:backend": "sh -c 'if [ -f src/backend/venv/bin/uvicorn ]; then src/backend/venv/bin/uvicorn app.main:app --app-dir src/backend --reload --port 8000; else python -m uvicorn app.main:app --app-dir src/backend --reload --port 8000; fi'",
     "dev:frontend": "npm --prefix src/frontend run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:frontend": "npm --prefix src/frontend run build",
-    "test:backend": "pytest src/backend/tests -v"
+    "test:backend": "sh -c 'if [ -f src/backend/venv/bin/pytest ]; then PYTHONPATH=src/backend src/backend/venv/bin/pytest src/backend/tests -v; else pytest src/backend/tests -v; fi'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -49,7 +49,7 @@ export const TopBar: React.FC = () => {
         </div>
         <span className="text-slate-700 hidden sm:inline">|</span>
         <span className="text-xs text-slate-400 hidden sm:inline font-mono">
-          Western Sub-Transmission Division • Ahmedabad Ring
+          Regional Power Grid • Transmission & Distribution Operations
         </span>
       </div>
 

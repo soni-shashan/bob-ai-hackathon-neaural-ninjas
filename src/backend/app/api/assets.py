@@ -10,47 +10,34 @@ from app.services.risk_engine import risk_engine
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 
-def _hydrate_asset(a: Asset, stage: str) -> AssetBase:
-    # Check if this is TR-104 and reflect demo scenario state
-    if a.id == "TR-104":
-        if stage == "baseline":
-            risk = 42
-            prob = 0.28
-            health = 72
-            status = "OPERATIONAL"
-            w_risk = "LOW"
-        elif stage == "degradation":
-            risk = 68
-            prob = 0.58
-            health = 55
-            status = "WARNING"
-            w_risk = "MODERATE"
-        else: # critical
-            risk = 94
-            prob = 0.82
-            health = 42
-            status = "CRITICAL"
-            w_risk = "HIGH"
-    elif a.id == "TR-087":
-        risk = 91
-        prob = 0.76
-        health = 48
+def _hydrate_asset(a: Asset, stage: Optional[str] = None) -> AssetBase:
+    if stage == "baseline" and a.id == "TR-104":
+        risk = 42
+        prob = 0.28
+        health = 72
+        status = "OPERATIONAL"
+        w_risk = "LOW"
+    elif stage == "degradation" and a.id == "TR-104":
+        risk = 68
+        prob = 0.58
+        health = 55
+        status = "WARNING"
+        w_risk = "MEDIUM"
+    elif stage == "critical" and a.id == "TR-104":
+        risk = 94
+        prob = 0.82
+        health = 42
         status = "CRITICAL"
         w_risk = "HIGH"
-    elif a.id == "TR-221":
-        risk = 87
-        prob = 0.71
-        health = 53
-        status = "HIGH"
-        w_risk = "HIGH"
     else:
-        # Dynamic mapping from health_score
+        # Dynamic calculation directly from real telemetry and health score in database
         health = a.health_score
-        risk = 100 - health + 10
-        risk = min(98, max(12, risk))
-        prob = round(risk / 115.0, 2)
-        status = a.status
-        w_risk = "MODERATE" if a.grid_zone == "East Grid" else "LOW"
+        base_risk = 100 - health
+        bonus = 14 if health < 50 else (8 if health < 75 else 2)
+        risk = min(98, max(12, int(round(base_risk + bonus))))
+        prob = round(min(0.95, max(0.08, risk / 115.0)), 2)
+        status = "CRITICAL" if risk >= 75 else ("HIGH" if risk >= 50 else ("WARNING" if risk >= 25 else "OPERATIONAL"))
+        w_risk = "HIGH" if a.grid_zone == "East Grid" else ("MEDIUM" if a.grid_zone in ["North Grid", "Central Grid"] else "LOW")
 
     return AssetBase(
         id=a.id,
@@ -87,7 +74,7 @@ def get_assets(
     demo_row = db.query(DemoScenarioState).filter(DemoScenarioState.id == 1).first()
     stage = demo_row.current_stage if demo_row else "critical"
 
-    query = db.query(Asset)
+    query = db.query(Asset).filter(~Asset.id.like("TR-TEST-%"))
     raw_assets = query.all()
 
     # Hydrate and calculate dynamic metrics
@@ -158,8 +145,8 @@ def create_asset(req: AssetCreate, db: Session = Depends(get_db)):
         asset_type=req.type or "Power Transformer",
         substation=req.location.strip(),
         grid_zone=req.grid_zone or "East Grid",
-        latitude=req.latitude or 23.05,
-        longitude=req.longitude or 72.65,
+        latitude=req.latitude or 28.6139,
+        longitude=req.longitude or 77.2090,
         capacity_mva=req.capacity_mva or 50.0,
         load_mw=req.load_mw or 30.0,
         health_score=82,

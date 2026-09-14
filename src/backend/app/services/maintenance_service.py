@@ -19,8 +19,15 @@ class MaintenanceService:
         for a in actions:
             crew = db.query(Crew).filter(Crew.id == a.crew_id).first() if a.crew_id else None
             
-            # Dynamic ETA lookup
-            eta = 18 if a.asset_id == "TR-104" else (26 if a.asset_id == "TR-087" else 35)
+            # Dynamic ETA based on priority
+            eta = 15 + a.priority * 7
+
+            # Calculate dynamic risk score based on asset health
+            if a.asset:
+                health = a.asset.health_score
+                act_risk = min(98, max(12, int(round(100 - health + (14 if health < 50 else 5)))))
+            else:
+                act_risk = 75
 
             items.append(MaintenanceActionItem(
                 id=a.id,
@@ -28,7 +35,7 @@ class MaintenanceService:
                 asset_id=a.asset_id,
                 asset_name=a.asset.name if a.asset else f"Asset {a.asset_id}",
                 location=a.asset.substation if a.asset else "Unknown Substation",
-                risk_score=a.asset.health_score if a.asset else 75, # will be populated with risk
+                risk_score=act_risk,
                 action=a.action,
                 crew_id=a.crew_id,
                 crew_name=crew.name if crew else "Unassigned",

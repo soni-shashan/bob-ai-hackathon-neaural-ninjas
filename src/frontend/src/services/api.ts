@@ -12,10 +12,13 @@ import {
   WeatherForecastDay,
   HistoricalIncident,
   AdvisorQueryResponse,
+  ChatHistoryItem,
   MLPredictRequest,
   MLPredictResponse,
+  MLModelInfo,
   DemoStateResponse,
-  DemoStage
+  DemoStage,
+  NasaPowerLiveResponse
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -197,6 +200,9 @@ export const getWeatherForecast = (): Promise<WeatherForecastDay[]> =>
 export const getWeatherAlerts = (): Promise<AlertNotification[]> =>
   fetchJson<AlertNotification[]>('/api/weather/alerts');
 
+export const getNasaPowerLive = (lat: number = 28.6139, lon: number = 77.2090): Promise<NasaPowerLiveResponse> =>
+  fetchJson<NasaPowerLiveResponse>(`/api/weather/nasa-power-live?lat=${lat}&lon=${lon}`);
+
 // 7. Incidents
 export const getIncidents = (params?: {
   asset_id?: string;
@@ -224,11 +230,18 @@ export const predictFailure = (req: MLPredictRequest): Promise<MLPredictResponse
     body: JSON.stringify(req)
   });
 
+export const getMLModelInfo = (): Promise<MLModelInfo> =>
+  fetchJson<MLModelInfo>('/api/ml/info');
+
 // 9. AI Advisor
-export const askAdvisor = (question: string, assetId?: string): Promise<AdvisorQueryResponse> =>
+export const askAdvisor = (
+  question: string,
+  history?: ChatHistoryItem[],
+  assetId?: string
+): Promise<AdvisorQueryResponse> =>
   fetchJson<AdvisorQueryResponse>('/api/advisor/query', {
     method: 'POST',
-    body: JSON.stringify({ question, asset_id: assetId })
+    body: JSON.stringify({ question, history, asset_id: assetId })
   });
 
 // 10. Demo Scenario Controller

@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="GridGuard AI - Predictive Grid Resilience & Equipment Failure Decision-Support Platform (IBM Bob Hackathon)",
+    description="GridGuard AI - Predictive Grid Resilience & Equipment Failure Decision-Support Platform",
     lifespan=lifespan
 )
 

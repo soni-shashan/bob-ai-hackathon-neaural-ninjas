@@ -35,15 +35,13 @@ import {
   getAsset,
   getSensorData,
   getAssetRisk,
-  getIncidents,
-  getDemoState
+  getIncidents
 } from '../services/api';
 import {
   AssetSummary,
   AssetSensorsResponse,
   RiskAnalysisResponse,
-  HistoricalIncident,
-  DemoStateResponse
+  HistoricalIncident
 } from '../types';
 
 export const AssetDetailPage: React.FC = () => {
@@ -55,7 +53,6 @@ export const AssetDetailPage: React.FC = () => {
   const [sensors, setSensors] = useState<AssetSensorsResponse | null>(null);
   const [risk, setRisk] = useState<RiskAnalysisResponse | null>(null);
   const [incidents, setIncidents] = useState<HistoricalIncident[]>([]);
-  const [demoState, setDemoState] = useState<DemoStateResponse | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,19 +65,17 @@ export const AssetDetailPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [assetRes, sensorRes, riskRes, incidentRes, demoRes] = await Promise.all([
+      const [assetRes, sensorRes, riskRes, incidentRes] = await Promise.all([
         getAsset(currentAssetId),
         getSensorData(currentAssetId),
         getAssetRisk(currentAssetId),
-        getIncidents({ asset_id: currentAssetId }),
-        getDemoState()
+        getIncidents({ asset_id: currentAssetId })
       ]);
 
       setAsset(assetRes);
       setSensors(sensorRes);
       setRisk(riskRes);
       setIncidents(incidentRes);
-      setDemoState(demoRes);
     } catch (err: any) {
       console.error('Failed to load asset details:', err);
       setError(err.message || 'Error loading asset diagnostic data.');
@@ -105,6 +100,14 @@ export const AssetDetailPage: React.FC = () => {
   const currentSensorPoints = sensors ? (sensors[activeSensorTab] || []) : [];
   const latestSensorValue = currentSensorPoints.length > 0 ? currentSensorPoints[currentSensorPoints.length - 1].value : 0;
 
+  const latestSensorPoints = {
+    pd: sensors?.partial_discharge?.length ? sensors.partial_discharge[sensors.partial_discharge.length - 1].value : 18.0,
+    temp: sensors?.temperature?.length ? sensors.temperature[sensors.temperature.length - 1].value : 72.0,
+    vib: sensors?.vibration?.length ? sensors.vibration[sensors.vibration.length - 1].value : 2.5,
+    oil: sensors?.oil_quality?.length ? sensors.oil_quality[sensors.oil_quality.length - 1].value : 80.0,
+    load: sensors?.load?.length ? sensors.load[sensors.load.length - 1].value : (asset.load_mw || 42.0),
+  };
+
   // Formatting chart points for readable hour labels
   const formattedChartData = currentSensorPoints.map((p, idx) => {
     const d = new Date(p.timestamp);
@@ -118,9 +121,8 @@ export const AssetDetailPage: React.FC = () => {
     };
   });
 
-  const isDemoAsset = currentAssetId === 'TR-104';
-  const riskScore = isDemoAsset && demoState ? demoState.risk_score : (risk?.risk_score ?? asset.risk_score);
-  const failureProb = isDemoAsset && demoState ? demoState.failure_probability : (risk?.failure_probability ?? asset.failure_probability);
+  const riskScore = risk?.risk_score ?? asset.risk_score;
+  const failureProb = risk?.failure_probability ?? asset.failure_probability;
 
   return (
     <div className="space-y-6">
@@ -141,11 +143,6 @@ export const AssetDetailPage: React.FC = () => {
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
               {asset.id}
             </span>
-            {isDemoAsset && (
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-semibold">
-                PRIMARY HACKATHON DEMO ASSET
-              </span>
-            )}
           </div>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
             <span>{asset.location}</span>
@@ -364,32 +361,51 @@ export const AssetDetailPage: React.FC = () => {
           <div className="space-y-2.5 font-mono text-xs">
             <div className="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
               <span className="text-slate-300">Partial Discharge</span>
-              <span className="px-2 py-0.5 rounded bg-red-950 text-red-300 font-bold border border-red-800 text-[10px]">
-                CRITICAL (42 pC)
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                latestSensorPoints.pd >= 35 ? 'bg-red-950 text-red-300 border-red-800' :
+                latestSensorPoints.pd >= 25 ? 'bg-orange-950 text-orange-300 border-orange-800' :
+                'bg-emerald-950 text-emerald-300 border-emerald-800'
+              }`}>
+                {latestSensorPoints.pd >= 35 ? 'CRITICAL' : latestSensorPoints.pd >= 25 ? 'ELEVATED' : 'NOMINAL'} ({latestSensorPoints.pd.toFixed(1)} pC)
               </span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
-              <span className="text-slate-300">Winding Temperature</span>
-              <span className="px-2 py-0.5 rounded bg-orange-950 text-orange-300 font-bold border border-orange-800 text-[10px]">
-                HIGH (91.2°C)
+              <span className="text-slate-300">Winding & Oil Temp</span>
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                latestSensorPoints.temp >= 85 ? 'bg-red-950 text-red-300 border-red-800' :
+                latestSensorPoints.temp >= 75 ? 'bg-orange-950 text-orange-300 border-orange-800' :
+                'bg-emerald-950 text-emerald-300 border-emerald-800'
+              }`}>
+                {latestSensorPoints.temp >= 85 ? 'CRITICAL' : latestSensorPoints.temp >= 75 ? 'HIGH' : 'NOMINAL'} ({latestSensorPoints.temp.toFixed(1)}°C)
               </span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
               <span className="text-slate-300">Vibration Amplitude</span>
-              <span className="px-2 py-0.5 rounded bg-orange-950 text-orange-300 font-bold border border-orange-800 text-[10px]">
-                HIGH (7.8 mm/s)
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                latestSensorPoints.vib >= 6.5 ? 'bg-red-950 text-red-300 border-red-800' :
+                latestSensorPoints.vib >= 4.5 ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                'bg-emerald-950 text-emerald-300 border-emerald-800'
+              }`}>
+                {latestSensorPoints.vib >= 6.5 ? 'HIGH' : latestSensorPoints.vib >= 4.5 ? 'MODERATE' : 'NORMAL'} ({latestSensorPoints.vib.toFixed(1)} mm/s)
               </span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
               <span className="text-slate-300">Dielectric Oil Condition</span>
-              <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 font-bold border border-amber-800 text-[10px]">
-                MODERATE (52/100)
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                latestSensorPoints.oil <= 55 ? 'bg-red-950 text-red-300 border-red-800' :
+                latestSensorPoints.oil <= 65 ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                'bg-emerald-950 text-emerald-300 border-emerald-800'
+              }`}>
+                {latestSensorPoints.oil <= 55 ? 'DEGRADED' : latestSensorPoints.oil <= 65 ? 'MODERATE' : 'GOOD'} ({latestSensorPoints.oil.toFixed(0)}/100)
               </span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
               <span className="text-slate-300">Feeder Capacity Draw</span>
-              <span className="px-2 py-0.5 rounded bg-orange-950 text-orange-300 font-bold border border-orange-800 text-[10px]">
-                HIGH (84 MW / 84%)
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                latestSensorPoints.load >= 65 ? 'bg-orange-950 text-orange-300 border-orange-800' :
+                'bg-slate-800 text-slate-300 border-slate-700'
+              }`}>
+                {latestSensorPoints.load.toFixed(1)} MW ({((latestSensorPoints.load / (asset.capacity_mva || 100)) * 100).toFixed(0)}%)
               </span>
             </div>
           </div>
@@ -457,19 +473,19 @@ export const AssetDetailPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
             <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
               <span className="text-[10px] text-slate-500 uppercase block">Customers</span>
-              <span className="text-white font-bold text-sm">18,500</span>
+              <span className="text-white font-bold text-sm">{asset.customers_affected.toLocaleString()}</span>
             </div>
             <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
               <span className="text-[10px] text-slate-500 uppercase block">Feeder Load</span>
-              <span className="text-white font-bold text-sm">42 MW</span>
+              <span className="text-white font-bold text-sm">{latestSensorPoints.load.toFixed(1)} MW</span>
             </div>
             <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
               <span className="text-[10px] text-slate-500 uppercase block">Critical Facilities</span>
-              <span className="text-cyan-300 font-bold text-xs">2 Hospitals, 3 Water</span>
+              <span className="text-cyan-300 font-bold text-xs">{currentAssetId === 'TR-104' ? '2 Hospitals, 3 Water' : 'Municipal Core'}</span>
             </div>
             <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">Backup Line</span>
-              <span className="text-rose-400 font-bold text-xs">LIMITED (Odhav)</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Grid Zone</span>
+              <span className="text-amber-400 font-bold text-xs">{asset.grid_zone || 'East Grid'}</span>
             </div>
           </div>
         </div>
@@ -501,7 +517,7 @@ export const AssetDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
           <div className="space-y-2">
             <div className="p-3 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
-              <strong className="text-cyan-400">1. Inspect Transformer:</strong> Dispatch emergency diagnostic team to Naroda within 12 hours.
+              <strong className="text-cyan-400">1. Inspect Transformer:</strong> Dispatch emergency diagnostic team to {asset.location} within 12 hours.
             </div>
             <div className="p-3 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
               <strong className="text-cyan-400">2. Crew Pre-positioning:</strong> Pre-position <strong className="text-white">Crew 2</strong> within 10 km (East Depot staging).
@@ -513,10 +529,10 @@ export const AssetDetailPage: React.FC = () => {
 
           <div className="space-y-2">
             <div className="p-3 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
-              <strong className="text-cyan-400">4. Load-Transfer Contingency:</strong> Formulate 15 MW load shedding and Odhav 220kV bus tie transfer.
+              <strong className="text-cyan-400">4. Load-Transfer Contingency:</strong> Formulate 15 MW load shedding and Central 220kV bus tie transfer.
             </div>
             <div className="p-3 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
-              <strong className="text-cyan-400">5. Spare Bushings:</strong> Hold replacement 66kV bushings on hot standby in Ahmedabad warehouse.
+              <strong className="text-cyan-400">5. Spare Bushings:</strong> Hold replacement 66kV bushings on hot standby in Central Operations Warehouse.
             </div>
             <div className="p-3 rounded bg-emerald-950/40 border border-emerald-800/80 text-emerald-300">
               <strong>Expected Benefit:</strong> Potentially reduce failure probability from 82% to approximately 24% <span className="text-[10px] text-slate-400">(model simulation estimate)</span>.

@@ -1,0 +1,19 @@
+{
+  "engine": "Equipment Failure Risk Engine",
+  "weights": {
+    "health_risk": 0.55,
+    "anomaly_risk": 0.35,
+    "mog_risk": 0.1
+  },
+  "thresholds": {
+    "Critical": 75.0,
+    "High": 50.0,
+    "Medium": 25.0,
+    "Low": 0.0
+  },
+  "score_range": [
+    5.3,
+    81.2
+  ],
+  "mean_risk": 22.37357318825703
+}

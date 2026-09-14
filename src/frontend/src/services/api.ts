@@ -19,7 +19,18 @@ import {
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const TOKEN_KEY = 'gridguard_token';
 
+// ── Auth Helper ──────────────────────────────────────────────────────
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
+// ── Core Fetch ───────────────────────────────────────────────────────
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   try {
@@ -27,9 +38,21 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...(options?.headers || {})
       }
     });
+
+    // Handle 401 — redirect to login
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('gridguard_user');
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+      throw new Error('Authentication expired. Please login again.');
+    }
 
     if (!res.ok) {
       const errText = await res.text();
@@ -42,6 +65,46 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     throw err;
   }
 }
+
+// ── Authentication ───────────────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user_name: string;
+  user_email: string;
+  expires_in: number;
+}
+
+export const loginUser = async (email: string, password: string): Promise<LoginResponse> => {
+  const url = `${API_BASE}/api/auth/login`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (res.status === 429) {
+    const data = await res.json();
+    throw new Error(data.detail || 'Too many login attempts. Please try again later.');
+  }
+
+  if (res.status === 401) {
+    const data = await res.json();
+    throw new Error(data.detail || 'Invalid email or password');
+  }
+
+  if (res.status === 403) {
+    const data = await res.json();
+    throw new Error(data.detail || 'Account is deactivated');
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Login failed [${res.status}]: ${errText || res.statusText}`);
+  }
+
+  return await res.json();
+};
 
 // 1. Dashboard
 export const getDashboardSummary = (): Promise<DashboardSummary> =>

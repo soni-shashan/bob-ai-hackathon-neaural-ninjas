@@ -1,15 +1,31 @@
 import math
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
-from app.models.models import Asset, SensorReading, WeatherForecast, Incident, Crew, MaintenanceAction, DemoScenarioState
+from passlib.context import CryptContext
+from app.models.models import Asset, SensorReading, WeatherForecast, Incident, Crew, MaintenanceAction, DemoScenarioState, User
 from app.services.risk_engine import risk_engine
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def seed_database(db: Session):
     """
     Populates deterministic mock database with 26 assets, 100+ sensor points each,
     15 historical incidents, 5 crews, multi-zone weather, and maintenance actions.
+    Also seeds default admin user on first run.
     """
-    # Check if already seeded
+    # Seed default admin user if not exists
+    existing_user = db.query(User).filter(User.email == "neaural.ninjas@electricity.com").first()
+    if not existing_user:
+        default_user = User(
+            email="neaural.ninjas@electricity.com",
+            hashed_password=pwd_context.hash("Admin@123"),
+            name="Neural Ninjas Admin",
+            is_active=True
+        )
+        db.add(default_user)
+        db.commit()
+
+    # Check if already seeded (assets)
     if db.query(Asset).first():
         return
 

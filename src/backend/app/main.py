@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database.session import engine, Base, SessionLocal
 from app.seed.seed_data import seed_database
+from app.api.auth_deps import get_current_user
 
 # Routers
+from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.assets import router as assets_router
 from app.api.sensors import router as sensors_router
@@ -46,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core Health Endpoint
+# Core Health Endpoint (public — no auth required)
 @app.get(f"{settings.API_PREFIX}/health", tags=["Health"])
 @app.get("/health", tags=["Health"])
 def health_check():
@@ -56,15 +58,21 @@ def health_check():
         "version": settings.VERSION
     }
 
-# Register API Routers
-app.include_router(dashboard_router, prefix=settings.API_PREFIX)
-app.include_router(assets_router, prefix=settings.API_PREFIX)
-app.include_router(sensors_router, prefix=settings.API_PREFIX)
-app.include_router(risk_router, prefix=settings.API_PREFIX)
-app.include_router(weather_router, prefix=settings.API_PREFIX)
-app.include_router(incidents_router, prefix=settings.API_PREFIX)
-app.include_router(maintenance_router, prefix=settings.API_PREFIX)
-app.include_router(crews_router, prefix=settings.API_PREFIX)
-app.include_router(ml_router, prefix=settings.API_PREFIX)
-app.include_router(advisor_router, prefix=settings.API_PREFIX)
-app.include_router(demo_router, prefix=settings.API_PREFIX)
+# ── Public Routes (no authentication) ──────────────────────────────────
+app.include_router(auth_router, prefix=settings.API_PREFIX)
+
+# ── Protected Routes (require valid JWT token) ─────────────────────────
+# All existing API routes are protected behind get_current_user dependency
+protected = [Depends(get_current_user)]
+
+app.include_router(dashboard_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(assets_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(sensors_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(risk_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(weather_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(incidents_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(maintenance_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(crews_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(ml_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(advisor_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(demo_router, prefix=settings.API_PREFIX, dependencies=protected)

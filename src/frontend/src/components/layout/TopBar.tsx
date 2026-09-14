@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, ShieldAlert, CloudRain, Bell, UserCheck, Radio } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export const TopBar: React.FC = () => {
+  const { user } = useAuth();
   const [timeStr, setTimeStr] = useState<string>('');
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -85,15 +87,15 @@ export const TopBar: React.FC = () => {
 
         {/* Operator Profile */}
         <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-          <div className="w-7 h-7 rounded-full bg-slate-800 border border-cyan-800 flex items-center justify-center text-cyan-400 text-xs font-bold font-mono">
-            OP
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 border border-cyan-800 flex items-center justify-center text-white text-xs font-bold font-mono">
+            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
           </div>
           <div className="hidden lg:block text-left">
             <p className="text-xs font-medium text-slate-200 leading-none">
-              Operator Console
+              {user?.name || 'Operator Console'}
             </p>
             <p className="text-[10px] text-cyan-400/80 font-mono leading-none mt-1">
-              Senior Grid Controller
+              Grid Controller
             </p>
           </div>
         </div>

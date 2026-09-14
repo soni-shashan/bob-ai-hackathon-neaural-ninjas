@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         "*"
     ]
 
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "gridguard-ai-secret-key-change-in-production-2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours
+
     class Config:
         env_file = ".env"
         extra = "ignore"

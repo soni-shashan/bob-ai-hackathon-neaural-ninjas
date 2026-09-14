@@ -15,6 +15,29 @@ import {
 import { RiskBadge } from '../components/common/RiskBadge';
 import { getAssets, getDemoState } from '../services/api';
 import { AssetSummary, DemoStateResponse } from '../types';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+const getAssetIcon = (asset: AssetSummary, isSelected: boolean) => {
+  const isCritical = asset.risk_level === 'CRITICAL';
+  const isHigh = asset.risk_level === 'HIGH';
+
+  const html = `
+    <div style="transform: translate(-50%, -50%);" class="relative group">
+      ${isCritical ? '<span class="animate-ping absolute -inset-1 rounded-full bg-red-500 opacity-75"></span>' : ''}
+      <div class="relative px-2 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border shadow-xl transition-all w-max whitespace-nowrap flex-nowrap ${isSelected ? 'ring-2 ring-cyan-400 scale-110 z-30' : 'hover:scale-105'} ${isCritical ? 'bg-red-950 text-red-200 border-red-600' : isHigh ? 'bg-orange-950 text-orange-200 border-orange-600' : 'bg-slate-900 text-emerald-300 border-emerald-700'}">
+        <svg class="w-3 h-3 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>${asset.id}</span>
+        <span class="border-l border-current/30 pl-1 font-extrabold ml-0.5">${asset.risk_score}</span>
+      </div>
+      <div class="text-[9px] font-mono text-slate-400 whitespace-nowrap text-center mt-1 hidden group-hover:block bg-[#090d16]/90 px-1 rounded border border-slate-800 absolute left-1/2 -translate-x-1/2 z-40">
+        ${asset.location}
+      </div>
+    </div>
+  `;
+  return L.divIcon({ html, className: '', iconSize: [0, 0] });
+};
 
 export const RiskMapPage: React.FC = () => {
   const navigate = useNavigate();
@@ -124,18 +147,32 @@ export const RiskMapPage: React.FC = () => {
 
           {/* Map Visual Simulation Canvas */}
           <div className="relative flex-1 bg-[#0a0e1a] overflow-hidden min-h-[480px]">
-            {/* Background Grid Pattern */}
-            <div
-              className="absolute inset-0 opacity-15"
-              style={{
-                backgroundImage: 'linear-gradient(#1f2d44 1px, transparent 1px), linear-gradient(90deg, #1f2d44 1px, transparent 1px)',
-                backgroundSize: '30px 30px'
-              }}
-            ></div>
+            
+            <MapContainer 
+              center={[23.0225, 72.5714]} 
+              zoom={11.5} 
+              className="absolute inset-0 z-0"
+              zoomControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                className="map-tiles-dark"
+              />
+              
+              {filteredAssets.map((asset) => (
+                <Marker 
+                  key={asset.id}
+                  position={[asset.latitude, asset.longitude]}
+                  icon={getAssetIcon(asset, selectedAsset?.id === asset.id)}
+                  eventHandlers={{ click: () => setSelectedAsset(asset) }}
+                />
+              ))}
+            </MapContainer>
 
-            {/* Weather Radar Band */}
+            {/* Weather Radar Band (Overlay over map) */}
             {showWeatherOverlay && (
-              <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-red-950/30 via-amber-950/20 to-transparent pointer-events-none border-l border-red-500/20 flex flex-col justify-between p-4">
+              <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-red-950/30 via-amber-950/20 to-transparent pointer-events-none border-l border-red-500/20 flex flex-col justify-between p-4 z-10">
                 <div className="self-end px-3 py-1.5 rounded-lg bg-red-950/90 border border-red-700 text-red-200 text-xs font-mono flex items-center gap-2 shadow-lg backdrop-blur-md">
                   <CloudLightning className="w-4 h-4 text-red-400 animate-pulse" />
                   <div>
@@ -149,65 +186,8 @@ export const RiskMapPage: React.FC = () => {
               </div>
             )}
 
-            {/* Geographical Assets Plotted on Grid */}
-            <div className="absolute inset-0 p-8">
-              {filteredAssets.map((asset) => {
-                // Approximate coordinate mapping to Ahmedabad grid bounding box:
-                // lat: 22.8 to 23.25, lon: 72.3 to 72.7
-                const latNorm = (asset.latitude - 22.8) / (23.25 - 22.8);
-                const lonNorm = (asset.longitude - 72.3) / (72.7 - 72.3);
-
-                const topPercent = Math.max(8, Math.min(90, (1 - latNorm) * 100));
-                const leftPercent = Math.max(8, Math.min(90, lonNorm * 100));
-
-                const isSelected = selectedAsset?.id === asset.id;
-                const isCritical = asset.risk_level === 'CRITICAL';
-                const isHigh = asset.risk_level === 'HIGH';
-
-                return (
-                  <div
-                    key={asset.id}
-                    onClick={() => setSelectedAsset(asset)}
-                    className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 group"
-                    style={{ top: `${topPercent}%`, left: `${leftPercent}%` }}
-                  >
-                    {/* Pulsing ring for critical assets */}
-                    {isCritical && (
-                      <span className="animate-ping absolute -inset-1 rounded-full bg-red-500 opacity-75"></span>
-                    )}
-
-                    {/* Marker Pin Icon */}
-                    <div
-                      className={`relative px-2 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border shadow-xl transition-all ${
-                        isSelected
-                          ? 'ring-2 ring-cyan-400 scale-110 z-30'
-                          : 'hover:scale-105'
-                      } ${
-                        isCritical
-                          ? 'bg-red-950 text-red-200 border-red-600'
-                          : isHigh
-                          ? 'bg-orange-950 text-orange-200 border-orange-600'
-                          : 'bg-slate-900 text-emerald-300 border-emerald-700'
-                      }`}
-                    >
-                      <MapPin className="w-3 h-3" />
-                      <span>{asset.id}</span>
-                      <span className="border-l border-current/30 pl-1 font-extrabold">
-                        {asset.risk_score}
-                      </span>
-                    </div>
-
-                    {/* Substation label below */}
-                    <div className="text-[9px] font-mono text-slate-400 whitespace-nowrap text-center mt-1 hidden group-hover:block bg-[#090d16]/90 px-1 rounded border border-slate-800">
-                      {asset.location}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
             {/* Map Legend */}
-            <div className="absolute left-4 bottom-4 p-3 rounded-lg bg-[#0d131f]/90 border border-slate-800 text-xs font-mono space-y-1.5 backdrop-blur-md shadow-xl">
+            <div className="absolute left-4 bottom-4 p-3 rounded-lg bg-[#0d131f]/90 border border-slate-800 text-xs font-mono space-y-1.5 backdrop-blur-md shadow-xl z-20">
               <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Risk Classification Legend
               </div>

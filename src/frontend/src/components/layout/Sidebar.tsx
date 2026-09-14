@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Cpu,
@@ -11,8 +11,10 @@ import {
   Sliders,
   ShieldCheck,
   Zap,
-  Activity
+  Activity,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -25,6 +27,15 @@ const NAV_ITEMS = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const confirmLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside className="w-64 bg-[#0d131f] border-r border-[#1e2a3f] flex flex-col flex-shrink-0 min-h-screen">
       {/* Brand Header */}
@@ -131,6 +142,55 @@ export const Sidebar: React.FC = () => {
           <span className="font-mono text-cyan-400">v1.0.0</span>
         </div>
       </div>
+
+      {/* User Profile & Logout */}
+      <div className="p-3 mx-3 mb-3 rounded-lg bg-[#121b2b] border border-[#1e2a3f]">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-xs font-bold font-mono flex-shrink-0">
+            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-200 leading-none truncate">
+              {user?.name || 'Admin'}
+            </p>
+            <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 truncate">
+              {user?.email || ''}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            title="Sign Out"
+            className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition-colors flex-shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-5 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-white font-mono mb-2">Confirm Logout</h3>
+            <p className="text-sm text-slate-400 mb-6">Are you sure you want to log out of the Grid Operations Center?</p>
+            <div className="flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-mono border border-transparent hover:border-slate-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmLogout}
+                className="px-4 py-2 rounded text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition-colors font-mono shadow-lg shadow-red-900/20"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
+

@@ -1,7 +1,18 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.database.session import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    name = Column(String(100), nullable=False, default="Admin")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
 
 class Asset(Base):
     __tablename__ = "assets"

@@ -17,11 +17,12 @@ Furthermore, extreme weather events (such as severe thunderstorms, torrential ra
 
 **GridGuard AI** bridges this gap by unifying:
 1. **Asset Health Sensor Telemetry** (Temperature, Vibration, Partial Discharge, Oil Quality, Load)
-2. **ML-Based Transformer & Equipment Failure Inference**
-3. **Meteorological Risk & Synoptic Storm Radar Tracking**
-4. **Asset Criticality & Substation Topology**
+2. **ML-Based Transformer & Equipment Failure Inference** (6-stage pipeline: IEEE C57.91 Health Score → MoG Classifier → Isolation Forest Anomaly Detection → Equipment Risk → NASA POWER Weather Risk → Composite Risk)
+3. **Meteorological Risk & Synoptic Storm Radar Tracking** (Live NASA POWER satellite weather data)
+4. **Asset Criticality & Substation Topology** (26 monitored assets across 5 grid zones)
 5. **Downstream Customer & MW Load Exposure**
-6. **Field Crew Proximity, Certifications, and Equipment Availability**
+6. **Field Crew Proximity, Certifications, and Equipment Availability** (5 specialized crews)
+7. **IBM Bob AI Real-Time Conversational Advisor** (Fleet-wide reasoning across all 26 assets)
 
 into an end-to-end resilience workflow:
 
@@ -40,20 +41,27 @@ $$\text{\bf Prediction} \longrightarrow \text{\bf Risk Assessment} \longrightarr
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     FastAPI Backend                         │
-│  ├── Composite Risk Engine                                  │
-│  ├── Maintenance Dispatch & Crew Optimizer                  │
-│  ├── AI Advisor Structured Reasoning Engine                 │
+│  ├── Composite Risk Engine (4-Weight Formula)               │
+│  ├── Maintenance Dispatch & Crew Optimizer (5 Crews)        │
+│  ├── IBM Bob AI Advisor (Fleet-Wide Reasoning Engine)       │
 │  ├── Interactive TR-104 Demo Simulator Controller           │
-│  └── Isolated ML Service Integration Boundary               │
+│  ├── NASA POWER Weather Integration Engine                  │
+│  └── 6-Stage ML Pipeline (Health → MoG → IsoForest → Risk) │
 └──────────────┬──────────────────────────────┬───────────────┘
                │                              │
                ▼                              ▼
 ┌──────────────────────────────┐ ┌────────────────────────────┐
-│       SQLite Database        │ │ Teammate's ML Model        │
-│ (26 Assets, 2,600+ Sensors,  │ │ (Pluggable via             │
-│  Incidents, Forecasts, Crews)│ │  POST /api/ml/predict)     │
+│       SQLite Database        │ │   IBM Bob AI API           │
+│ (26 Assets, 2,600+ Sensors,  │ │   (Granite/fast Model)     │
+│  Incidents, Forecasts, Crews)│ │   Real-Time LLM Reasoning  │
 └──────────────────────────────┘ └────────────────────────────┘
 ```
+
+### 🤖 IBM Bob AI Integration
+The **AI Operations Advisor** (`/advisor`) is powered by IBM Bob AI API using the Granite/fast model. It provides fleet-wide conversational reasoning across all 26 assets and 5 grid zones. The advisor:
+- Answers general fleet health, maintenance plan, and crew staging questions with full system context
+- Provides asset-specific deep analysis when asked about a particular asset (e.g., TR-104)
+- Falls back to rule-based heuristic reasoning if the API is unavailable
 
 ### 🤝 Pluggable ML Model Boundary (Zero Frontend Coupling)
 The frontend communicates exclusively with `POST /api/ml/predict`. The ML model is isolated behind `src/backend/app/services/ml_service.py`. When your teammate's ML model is ready, update `src/backend/.env`:
@@ -62,6 +70,31 @@ USE_EXTERNAL_ML_SERVICE=true
 EXTERNAL_ML_SERVICE_URL="http://friend-ml-api:8001/predict"
 ```
 No frontend modifications are needed!
+
+---
+
+## 🧠 ML Pipeline (6-Stage Architecture)
+
+```text
+Stage 1: IEEE C57.91 Physics Health Score
+    ↓
+Stage 2: Mixture-of-Gaussians (MoG) Classifier → MOG_risk_label
+    ↓
+Stage 3: Isolation Forest Anomaly Detection → anomaly_flag + anomaly_score
+    ↓
+Stage 4: Equipment Risk Engine → equipment_risk_score (0-100)
+    ↓
+Stage 5: NASA POWER Weather Risk Engine → weather_risk_multiplier
+    ↓
+Stage 6: Composite Risk = 0.40×Equipment + 0.20×Weather + 0.25×Impact + 0.15×Criticality
+```
+
+**Trained Model Artifacts** (stored in `src/backend/app/ml/artifacts/`):
+- `isolation_forest_model.pkl` — Isolation Forest anomaly detector
+- `mog_classifier.pkl` — Mixture-of-Gaussians classifier
+- `weather_risk_engine.pkl` — Weather stress multiplier model
+- `equipment_risk_engine.pkl` — Equipment degradation scorer
+- `nasa_power_weather_raw.csv` — Live NASA POWER satellite weather data
 
 ---
 
@@ -88,24 +121,45 @@ GridGuard AI includes a built-in **Interactive Demo Simulator Bar** located at t
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+ and npm
+- Docker (optional, for containerized deployment)
 
-### 1. Install Dependencies
-```powershell
+### Option 1: Docker Deployment (Recommended)
+
+```bash
+# Build and run with Docker Compose
+docker compose up --build
+
+# Access the application
+# → Dashboard:  http://localhost:3000
+# → API Health: http://localhost:3000/api/health
+```
+
+Or with plain Docker:
+```bash
+docker build -t gridguard-ai .
+docker run -p 3000:80 gridguard-ai
+```
+
+### Option 2: Local Development
+
+#### 1. Install Dependencies
+```bash
 # Backend
 cd src/backend
-python -m pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
 # Frontend
 cd ../frontend
 npm install
 ```
 
-### 2. Run the Application
-```powershell
+#### 2. Run the Application
+```bash
 # Terminal 1: Backend
 cd src/backend
-$env:PYTHONPATH="."
-python -m uvicorn app.main:app --reload --port 8000
+PYTHONPATH="." python -m uvicorn app.main:app --reload --port 8000
 
 # Terminal 2: Frontend
 cd src/frontend
@@ -116,11 +170,17 @@ npm run dev
 - **FastAPI Interactive Docs:** `http://localhost:8000/docs`
 - **Backend Health Check:** `http://localhost:8000/api/health`
 
-### 3. Run Automated Tests
-```powershell
+### 3. Login Credentials
+```
+Email:    neaural.ninjas@electricity.com
+Password: Admin@123
+```
+
+### 4. Run Automated Tests
+```bash
 cd src/backend
-$env:PYTHONPATH="."
-python -m pytest tests/test_api.py -v
+PYTHONPATH="." python -m pytest tests/test_api.py -v
+# Expected: 22/22 tests passed
 ```
 
 ---
@@ -129,21 +189,73 @@ python -m pytest tests/test_api.py -v
 
 | Route | View | Description |
 |---|---|---|
-| `/dashboard` | Operations Center | KPI cards, interactive SVG schematic grid topology, top risk assets, 24h risk trend chart, active alerts. |
-| `/assets` | Fleet Inventory | Multi-facet filtering (risk level, type, location), search, sorting, and pagination across all 248 grid assets. |
+| `/dashboard` | Operations Center | KPI cards (Grid Health Index, Active Alerts, Critical/High/Medium/Low risk distribution with percentages), interactive SVG schematic grid topology, top risk assets, 24h risk trend chart. |
+| `/assets` | Fleet Inventory | Multi-facet filtering (risk level, type, location), search, sorting, and pagination across all 26 monitored grid assets. |
 | `/assets/:assetId` | Asset Detail & SCADA | 5 sensor time-series charts (Temp, Vib, PD, Oil, Load), health diagnostics, explainable risk factors, weather stress decomposition, and action plan. |
 | `/risk-map` | Geospatial Observatory | Full-screen interactive map with Doppler storm radar overlay, substation coordinates, and slide-out asset drawer. |
-| `/maintenance` | Dispatch Planner | Prioritized action queue, crew pre-positioning recommendations, skill and equipment matching, and one-click crew assignment. |
-| `/weather` | Meteorological Intel | Multi-zone grid risk table, active Doppler alerts, and 7-day synoptic forecast. |
+| `/maintenance` | Dispatch Planner | Prioritized action queue (5 priority levels), crew pre-positioning recommendations, skill and equipment matching, and one-click crew assignment. |
+| `/weather` | Meteorological Intel | Multi-zone grid risk table (5 zones), active Doppler alerts, and 7-day synoptic forecast from NASA POWER satellite data. |
 | `/incidents` | Reliability Archive | Historical failure log, root-cause forensics, restoration durations, and weather correlations. |
-| `/advisor` | Decision-Support AI | Structured operator reasoning engine with evidence, recommended actions, and outage avoidance estimates. |
+| `/advisor` | AI Operations Advisor | IBM Bob AI-powered fleet-wide conversational reasoning engine with evidence-backed recommendations, maintenance plans, storm vulnerability analysis, and crew staging guidance. |
 | `/settings` | Engine Tuning | Composite risk weights sliders, classification thresholds, and ML model integration status. |
 
 ---
 
 ## 🧪 Technology Stack
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Recharts, Lucide React, React Router DOM
-- **Backend:** Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2, HTTPX, Pytest
-- **Database:** SQLite (Relational ORM with pre-seeded deterministic grid datasets)
-- **Deployment:** Self-contained, zero external mandatory cloud dependencies for local demonstration.
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Recharts, Leaflet, Lucide React, React Router DOM
+- **Backend:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2, HTTPX, Pytest
+- **ML/AI:** Scikit-learn (Isolation Forest, ExtraTrees), IBM Bob AI API (Granite/fast), IEEE C57.91 Physics Model
+- **Database:** SQLite (Relational ORM with 26 pre-seeded deterministic grid assets, 2,600+ sensor readings)
+- **Weather:** NASA POWER Satellite API (Live meteorological data integration)
+- **Deployment:** Docker, Nginx, Supervisord (single-container production deployment)
+
+---
+
+## 📁 Project Structure
+
+```text
+bob-ai-hackathon-neaural-ninjas/
+├── Dockerfile                    # Multi-stage production build
+├── docker-compose.yml            # One-command deployment
+├── docker/
+│   ├── nginx.conf                # Reverse proxy + SPA serving
+│   ├── supervisord.conf          # Process manager (Nginx + Uvicorn)
+│   └── start.sh                  # Container startup script
+├── src/
+│   ├── backend/
+│   │   ├── app/
+│   │   │   ├── api/              # REST API route handlers
+│   │   │   ├── models/           # SQLAlchemy ORM models
+│   │   │   ├── schemas/          # Pydantic request/response schemas
+│   │   │   ├── services/         # Business logic (advisor, risk, ML)
+│   │   │   ├── ml/               # ML pipeline & trained model artifacts
+│   │   │   ├── seed/             # Database seed data
+│   │   │   ├── config.py         # Application configuration
+│   │   │   └── main.py           # FastAPI app entry point
+│   │   ├── tests/                # 22 automated API tests
+│   │   └── requirements.txt      # Python dependencies
+│   ├── frontend/
+│   │   ├── src/
+│   │   │   ├── pages/            # 10 application pages
+│   │   │   ├── components/       # Reusable UI components
+│   │   │   └── services/         # API client services
+│   │   ├── package.json          # Node.js dependencies
+│   │   └── vite.config.ts        # Vite + proxy configuration
+│   ├── dataset.md                # Data source documentation
+│   ├── models.md                 # ML model architecture documentation
+│   └── pipeline.md               # Training & inference pipeline docs
+├── submission.yaml               # Hackathon submission metadata
+└── README.md                     # This file
+```
+
+---
+
+## 👥 Team Neural Ninjas
+
+| Role | Name | Email |
+|---|---|---|
+| Team Lead | Shashan Lumbhani | 23cs042@charusat.edu.in |
+| Member | Nikhil Vaghela | 23dce124@charusat.edu.in |
+| Member | Vinay Trivedi | 23it134@charusat.edu.in |
+| Member | Het Prajapati | 23dce100@charusat.edu.in |

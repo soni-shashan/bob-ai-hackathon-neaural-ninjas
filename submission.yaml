@@ -35,7 +35,7 @@ submission:
     frameworks: ["FastAPI", "React 18", "Vite", "Tailwind CSS", "Scikit-learn"]
     ibm_technologies: ["IBM Bob AI API", "IBM Granite"]
     databases: ["SQLite", "SQLAlchemy"]
-    other: ["Leaflet", "Recharts", "Pytest", "NASA POWER API", "Uvicorn"]
+    other: ["Leaflet", "Recharts", "Pytest", "NASA POWER API", "Uvicorn","Docker"]
 
   what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
     Integrating authentic high-voltage electrical grid sensor telemetry and trained scikit-learn anomaly detection models with IBM Bob AI real-time LLM reasoning to give grid dispatchers actionable failure predictions, live schematic grid topology, and automated crew dispatching before storm-induced equipment failures occur.

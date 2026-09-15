@@ -297,9 +297,9 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <KPICard
-          title="Total Monitored Assets"
+          title="Monitored Assets"
           value={totalCount}
           subtitle="400kV / 220kV / 66kV"
           icon={Cpu}
@@ -307,33 +307,34 @@ export const DashboardPage: React.FC = () => {
         />
         <KPICard
           title="Critical Assets"
-          value={`${critCount} (${critPct}%)`}
-          subtitle="Immediate action required"
+          value={critCount}
+          subtitle={`${critPct}% of fleet`}
           icon={AlertTriangle}
           badge={{ text: 'Urgent', variant: 'danger' }}
           trend={{ text: 'Action required', isGood: false }}
         />
         <KPICard
           title="High Risk Assets"
-          value={`${highCount} (${highPct}%)`}
-          subtitle="Elevated failure metrics"
+          value={highCount}
+          subtitle={`${highPct}% of fleet`}
           icon={ShieldAlert}
           badge={{ text: 'Watch', variant: 'warning' }}
+          trend={{ text: 'Elevated', isGood: false }}
         />
         <KPICard
           title="Customers at Risk"
           value={(summary?.customers_at_risk ?? 44500).toLocaleString()}
           subtitle="Downstream accounts"
           icon={Users}
-          trend={{ text: 'Eastern zone', isGood: false }}
+          trend={{ text: 'East zone', isGood: false }}
         />
         <KPICard
           title="Weather Alerts"
           value={summary?.active_weather_alerts ?? 2}
-          subtitle="Severe rain & storm cells"
+          subtitle="Storm cells active"
           icon={CloudLightning}
           badge={{ text: 'Active', variant: 'warning' }}
-          trend={{ text: 'East Grid Zone', isGood: false }}
+          trend={{ text: 'East Grid', isGood: false }}
         />
       </div>
 

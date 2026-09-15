@@ -16,13 +16,13 @@ class AdvisorService:
     Operator-focused Real-Time Grid AI Advisor powered by IBM Bob AI API.
     Injects real-time SCADA telemetry, predictive ML failure probabilities,
     Doppler weather conditions, and maintenance crew logistics into the LLM context.
-    Provides authoritative grid-wide reasoning across the entire 26-asset fleet.
+    Provides authoritative grid-wide reasoning across the entire monitored asset fleet.
     """
 
     @classmethod
     def _build_live_context(cls, db: Session) -> str:
         """
-        Builds a rich, grounded snapshot of active power grid operations across all 26 assets.
+        Builds a rich, grounded snapshot of active power grid operations across all monitored assets.
         """
         try:
             assets_query = db.query(Asset).filter(~Asset.id.like("TR-TEST-%"))
@@ -96,7 +96,12 @@ class AdvisorService:
             )
         except Exception as e:
             logger.warning(f"Error building live context: {e}")
-            return "Fleet: 26 HV assets monitored across 5 zones. Health: 71/100. Critical: TR-104, TR-087, CB-087. High: TR-221, TR-168, CB-104."
+            # Attempt to get a dynamic count even in the error path
+            try:
+                fallback_count = db.query(Asset).filter(~Asset.id.like("TR-TEST-%")).count()
+            except Exception:
+                fallback_count = 26
+            return f"Fleet: {fallback_count} HV assets monitored across 5 zones. Health: 71/100. Critical assets require immediate attention."
 
     @classmethod
     def _call_ibm_bob_api(
@@ -115,13 +120,19 @@ class AdvisorService:
 
         live_context = cls._build_live_context(db)
 
+        # Get dynamic fleet count for system prompt
+        try:
+            fleet_count = db.query(Asset).filter(~Asset.id.like("TR-TEST-%")).count()
+        except Exception:
+            fleet_count = 26
+
         system_prompt = (
             "You are GridGuard AI, an expert real-time electrical grid resilience, reliability, and operations advisor powered by IBM Bob AI.\n"
             "You are advising the Grid Operations Center dispatcher/operator in real time.\n\n"
             "CURRENT LIVE ELECTRICAL GRID TELEMETRY & SYSTEM STATE:\n"
             f"{live_context}\n\n"
             "CRITICAL OPERATIONAL RULES:\n"
-            "1. GRID-WIDE / SYSTEM-LEVEL DEFAULT SCOPE: Operators oversee the entire regional grid (26 high-voltage assets across East, North, Central, South, and West zones).\n"
+            f"1. GRID-WIDE / SYSTEM-LEVEL DEFAULT SCOPE: Operators oversee the entire regional grid ({fleet_count} high-voltage assets across East, North, Central, South, and West zones).\n"
             "   Unless the operator explicitly asks about a single isolated asset ID (e.g. 'What is TR-104 status?' or 'Why is TR-087 degraded?'), ALWAYS frame your response from the perspective of the ENTIRE GRID SYSTEM.\n"
             "2. When answering general inquiries (such as maintenance plan, grid health, storm vulnerability, crew staging, or risk priorities), provide a comprehensive system-wide summary covering all relevant priority assets (e.g. TR-104, TR-087, TR-221, CB-104, TR-055), affected substations, and coordinated logistics. Do NOT limit your answer to a single fixed asset.\n"
             "3. If the user asks specifically about an individual asset (e.g. 'TR-104'), then provide targeted diagnostics and telemetry for that asset.\n"
@@ -258,7 +269,10 @@ class AdvisorService:
         high_assets = [a for a in assets if a.status == "HIGH"]
         cust_cnt = sum(a.customers_affected for a in (crit_assets + high_assets)) or 44500
 
-        # Check for specific asset inquiry
+        # Check for specific asset inquiry by ID pattern (e.g. TR-121607, CB-087)
+        asset_id_match = re.search(r"\b((?:TR|CB)-\d+)\b", q_lower, re.IGNORECASE)
+        queried_asset_id = asset_id_match.group(1).upper() if asset_id_match else (asset_id.upper() if asset_id else None)
+
         is_tr104_specific = ("why is tr-104" in q_lower) or ("tr-104 considered" in q_lower) or ("fails" in q_lower and "104" in q_lower) or (asset_id == "TR-104")
 
         # 1. Failure impact of TR-104 (Specific asset inquiry)
@@ -309,6 +323,75 @@ class AdvisorService:
                 related_asset_id="TR-104",
                 model_name="gridguard-engine/local-rules"
             )
+
+        # 2b. Generic asset lookup — handles ANY asset the user asks about (e.g. TR-121607)
+        if queried_asset_id and queried_asset_id != "TR-104":
+            matched_asset = next((a for a in assets if a.id == queried_asset_id), None)
+            if matched_asset:
+                a = matched_asset
+                health = a.health_score
+                base_risk = 100 - health
+                bonus = 14 if health < 50 else (8 if health < 75 else 2)
+                risk_score = min(98, max(12, int(round(base_risk + bonus))))
+                fail_prob = round(min(0.95, max(0.08, risk_score / 115.0)), 2)
+                status_label = "CRITICAL" if risk_score >= 75 else ("HIGH" if risk_score >= 50 else ("WARNING" if risk_score >= 25 else "OPERATIONAL"))
+                priority_level = "CRITICAL" if risk_score >= 75 else ("HIGH" if risk_score >= 50 else ("MEDIUM" if risk_score >= 25 else "LOW"))
+
+                # Get latest sensor reading if available
+                latest_sensor = db.query(SensorReading).filter(
+                    SensorReading.asset_id == queried_asset_id
+                ).order_by(SensorReading.timestamp.desc()).first()
+
+                evidence = [
+                    f"Asset ID: {a.id} | Name: {a.name} | Type: {a.asset_type}",
+                    f"Substation: {a.substation} | Grid Zone: {a.grid_zone}",
+                    f"Health Score: {health}/100 | Risk Score: {risk_score} | Failure Probability: {fail_prob*100:.0f}%",
+                    f"Status: {status_label} | Load: {a.load_mw} MW | Capacity: {a.capacity_mva} MVA",
+                    f"Downstream Customers Affected: {a.customers_affected:,}",
+                    f"Last Maintenance: {a.last_maintenance or 'N/A'} | Installed: {a.installed_date or 'N/A'}",
+                ]
+                if latest_sensor:
+                    evidence.append(
+                        f"Latest Telemetry — Temp: {latest_sensor.temperature}°C, Vibration: {latest_sensor.vibration} mm/s, "
+                        f"Partial Discharge: {latest_sensor.partial_discharge} pC, Oil Quality: {latest_sensor.oil_quality}%"
+                    )
+
+                return AdvisorQueryResponse(
+                    answer=(
+                        f"Asset {a.id} ({a.name}) is a {a.asset_type} located at {a.substation} in the {a.grid_zone}. "
+                        f"Current health score is {health}/100 with a {fail_prob*100:.0f}% predicted failure probability. "
+                        f"Status: {status_label}. This asset serves {a.customers_affected:,} downstream customers "
+                        f"and is operating at {a.load_mw} MW load against {a.capacity_mva} MVA rated capacity."
+                    ),
+                    priority=priority_level,
+                    evidence=evidence,
+                    recommended_actions=[
+                        f"Continue monitoring {a.id} telemetry streams via SCADA dashboard",
+                        f"Schedule routine diagnostic inspection if last maintenance exceeds 90-day window",
+                        f"Review weather exposure for {a.grid_zone} corridor and verify crew staging readiness"
+                    ],
+                    expected_impact=f"Proactive monitoring of {a.id} ensures operational continuity for {a.customers_affected:,} dependent customers.",
+                    related_asset_id=a.id,
+                    model_name="gridguard-engine/local-rules"
+                )
+            else:
+                # Asset ID was mentioned but not found in DB
+                return AdvisorQueryResponse(
+                    answer=f"Asset {queried_asset_id} was not found in the current fleet inventory of {total_assets} monitored assets. Please verify the asset ID.",
+                    priority="LOW",
+                    evidence=[
+                        f"Asset ID {queried_asset_id} does not match any record in the active fleet database",
+                        f"Current fleet consists of {total_assets} monitored high-voltage assets"
+                    ],
+                    recommended_actions=[
+                        "Verify the asset ID and try again",
+                        "Use the Grid Assets page to search for the correct asset ID",
+                        "If this is a new asset, register it via the 'Track New Transformer' feature first"
+                    ],
+                    expected_impact="No operational impact — asset identification clarification needed.",
+                    related_asset_id=None,
+                    model_name="gridguard-engine/local-rules"
+                )
 
         # 3. Grid-Wide Maintenance Plan Inquiry (System-Level)
         if "plan" in q_lower or "maintenance" in q_lower or "schedule" in q_lower or "today" in q_lower:
@@ -441,9 +524,24 @@ class AdvisorService:
     ) -> AdvisorQueryResponse:
         """
         Primary entrypoint for answering operator queries.
-        Calls IBM Bob AI API first with real telemetry context, falling back gracefully to local heuristics if needed.
+        For specific asset queries, uses real-time DB lookup first for accuracy.
+        For general fleet queries, calls IBM Bob AI API with live telemetry context,
+        falling back gracefully to local heuristics if needed.
         """
-        # Attempt IBM Bob AI API real-time inference
+        q_lower = question.lower().strip()
+
+        # Detect if the user is asking about a specific asset by ID
+        asset_id_match = re.search(r"\b((?:TR|CB)-\d+)\b", q_lower, re.IGNORECASE)
+        queried_asset_id = asset_id_match.group(1).upper() if asset_id_match else (asset_id.upper() if asset_id else None)
+
+        # For specific asset queries, use the local DB-backed heuristic engine FIRST
+        # This ensures newly added assets are always found with real data
+        if queried_asset_id:
+            local_response = cls._fallback_heuristic_response(db, question, asset_id)
+            if local_response:
+                return local_response
+
+        # For general fleet-wide queries, attempt IBM Bob AI API real-time inference
         response = cls._call_ibm_bob_api(db, question, asset_id, history)
         if response:
             return response

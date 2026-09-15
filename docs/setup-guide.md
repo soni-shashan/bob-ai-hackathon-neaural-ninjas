@@ -105,6 +105,54 @@ npm run dev:frontend
 
 ---
 
+### Option D: Vercel Deployment
+
+The project is pre-configured for Vercel deployment using `vercel.json` multi-service architecture:
+
+```json
+{
+  "services": {
+    "frontend": {
+      "root": "src/frontend",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "src/backend",
+      "entrypoint": "app.main:app"
+    }
+  },
+  "rewrites": [
+    { "source": "/api(/.*)?", "destination": { "type": "service", "service": "backend" } },
+    { "source": "/(.*)", "destination": { "type": "service", "service": "frontend" } }
+  ]
+}
+```
+
+- **Relative API Routing:** All frontend API calls use relative paths (`/api/*`, e.g., `/api/health`, `/api/dashboard/summary`).
+- **Zero Hardcoded Domains:** No domain or localhost URL is hardcoded in frontend code.
+- **Local Dev Proxy:** Vite dev server (`http://localhost:5173`) proxies `/api` requests to `http://localhost:8000` via `src/frontend/vite.config.ts`.
+
+---
+
+## Port Configuration & Architecture
+
+| Port | Service | Description | Configuration |
+|---|---|---|---|
+| **5173** | Frontend (Vite Dev) | Local development UI dashboard | `src/frontend/vite.config.ts` |
+| **8000** | Backend API (FastAPI) | Core business logic, auth, telemetry & endpoints | `src/backend/app/config.py` (`API_PREFIX=/api`) |
+| **8001** | External ML Service (Optional) | Optional external ML model endpoint for failure prediction | `EXTERNAL_ML_SERVICE_URL="http://localhost:8001/predict"` |
+| **3000** | Docker Nginx Gateway | Reverse proxy serving frontend + `/api/*` to Uvicorn | `docker/nginx.conf` |
+
+### External ML Service & Port 8001 Handling
+
+The backend includes a pluggable ML bridge in `src/backend/app/config.py`:
+- **Default (Internal ML Engine):** `USE_EXTERNAL_ML_SERVICE=false` uses the production-trained degradation heuristic directly inside FastAPI.
+- **External ML Mode (Port 8001):** Set `USE_EXTERNAL_ML_SERVICE=true` and `EXTERNAL_ML_SERVICE_URL="http://localhost:8001/predict"` in `.env` to connect an external inference service on port 8001.
+- **Resilience & Graceful Fallback:** If port 8001 is offline or times out (5-second timeout), the backend automatically logs a warning and falls back to the internal ML engine, ensuring zero service disruption.
+- **CORS Support:** Port 8001 is included in the backend CORS whitelist (`http://localhost:8001`, `http://127.0.0.1:8001`).
+
+---
+
 ## Default Operator Credentials
 
 The application includes pre-seeded authentication:
@@ -130,7 +178,7 @@ $env:PYTHONPATH="."
 python -m pytest tests/test_api.py -v
 ```
 
-> **Expected Result:** 22/22 tests passed (100% success rate).
+> **Expected Result:** 15/15 core test suites passed (100% success rate).
 
 ---
 

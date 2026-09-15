@@ -24,16 +24,20 @@ class Settings(BaseSettings):
     WEIGHT_IMPACT: float = 0.25
     WEIGHT_CRITICALITY: float = 0.15
 
-    # ML Bridge Settings
-    USE_EXTERNAL_ML_SERVICE: bool = False
-    EXTERNAL_ML_SERVICE_URL: str = "http://localhost:8001/predict"
+    # ML Bridge Settings (Port 8001 external inference service or fallback)
+    USE_EXTERNAL_ML_SERVICE: bool = os.getenv("USE_EXTERNAL_ML_SERVICE", "false").lower() in ("true", "1", "yes")
+    EXTERNAL_ML_SERVICE_URL: str = os.getenv("EXTERNAL_ML_SERVICE_URL", "http://localhost:8001/predict")
 
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8001",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
         "*"
     ]
 

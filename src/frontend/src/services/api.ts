@@ -21,7 +21,26 @@ import {
   NasaPowerLiveResponse
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Base API configuration: In production (Vercel) and local dev, requests use relative /api/* paths.
+// VITE_API_URL can optionally override the base URL if specified, but defaults to '' for relative /api/* routing.
+const rawBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const API_BASE = rawBase === '/api' ? '' : rawBase;
+
+/**
+ * Resolves API endpoints to ensure clean relative paths (e.g. /api/health)
+ * and prevents accidental path duplication like /api/api/...
+ */
+export function resolveUrl(endpoint: string): string {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!API_BASE) {
+    return cleanEndpoint;
+  }
+  if (API_BASE.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+    return `${API_BASE.slice(0, -4)}${cleanEndpoint}`;
+  }
+  return `${API_BASE}${cleanEndpoint}`;
+}
+
 const TOKEN_KEY = 'gridguard_token';
 
 // ── Auth Helper ──────────────────────────────────────────────────────
@@ -35,7 +54,7 @@ function getAuthHeaders(): Record<string, string> {
 
 // ── Core Fetch ───────────────────────────────────────────────────────
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+  const url = resolveUrl(endpoint);
   try {
     const res = await fetch(url, {
       ...options,
@@ -69,6 +88,16 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
   }
 }
 
+// ── Health Check ─────────────────────────────────────────────────────
+export interface HealthStatusResponse {
+  status: string;
+  service: string;
+  version: string;
+}
+
+export const checkHealth = (): Promise<HealthStatusResponse> =>
+  fetchJson<HealthStatusResponse>('/api/health');
+
 // ── Authentication ───────────────────────────────────────────────────
 export interface LoginResponse {
   access_token: string;
@@ -79,7 +108,7 @@ export interface LoginResponse {
 }
 
 export const loginUser = async (email: string, password: string): Promise<LoginResponse> => {
-  const url = `${API_BASE}/api/auth/login`;
+  const url = resolveUrl('/api/auth/login');
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

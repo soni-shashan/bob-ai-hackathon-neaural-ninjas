@@ -113,11 +113,11 @@ The project is pre-configured for Vercel deployment using `vercel.json` multi-se
 {
   "services": {
     "frontend": {
-      "root": "src/frontend",
+      "root": "frontend",
       "framework": "vite"
     },
     "backend": {
-      "root": "src/backend",
+      "root": "backend",
       "entrypoint": "app.main:app"
     }
   },

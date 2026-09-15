@@ -27,6 +27,9 @@ ENV/
 env/
 *.db
 *.sqlite3
+!gridguard.db
+!src/backend/gridguard.db
+!src/gridguard.db
 .pytest_cache/
 
 # Node / Frontend

@@ -1,15 +1,54 @@
 import os
+import shutil
 from pydantic_settings import BaseSettings
 from typing import List
+
+def get_database_url() -> str:
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        return env_url
+
+    # Check if running in serverless environment (Vercel, AWS Lambda) or read-only filesystem
+    is_serverless = bool(
+        os.getenv("VERCEL")
+        or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+        or os.getenv("LAMBDA_TASK_ROOT")
+    )
+
+    if is_serverless:
+        tmp_db_path = "/tmp/gridguard.db"
+        # If pre-seeded database exists in deployment package, copy to writable /tmp
+        candidates = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "gridguard.db"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "gridguard.db"),
+            os.path.join(os.getcwd(), "gridguard.db"),
+            os.path.join(os.getcwd(), "src", "backend", "gridguard.db"),
+            os.path.join(os.getcwd(), "backend", "gridguard.db"),
+        ]
+        if not os.path.exists(tmp_db_path):
+            for candidate in candidates:
+                if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
+                    try:
+                        shutil.copyfile(candidate, tmp_db_path)
+                        break
+                    except Exception:
+                        pass
+        return f"sqlite:///{tmp_db_path}"
+
+    # Local development: locate database in backend directory or workspace root
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    workspace_db = os.path.join(backend_dir, "gridguard.db")
+    target_dir = os.path.dirname(workspace_db)
+    if os.access(target_dir, os.W_OK):
+        return f"sqlite:///{workspace_db}"
+    else:
+        return "sqlite:////tmp/gridguard.db"
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "GridGuard AI"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'gridguard.db'))}"
-    )
+    DATABASE_URL: str = get_database_url()
 
     # Risk Engine Thresholds (Configurable - Exactly matches GridGuard_AI_Final.ipynb: Low <25, Medium 25-50, High 50-75, Critical >=75)
     RISK_THRESHOLD_LOW: float = 25.0

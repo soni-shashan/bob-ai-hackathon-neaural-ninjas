@@ -1,12 +1,21 @@
 {
-  "buildCommand": "npm --prefix src/frontend run build",
-  "outputDirectory": "src/frontend/dist",
-  "installCommand": "npm --prefix src/frontend install",
-  "framework": "vite",
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend",
+      "entrypoint": "app.main:app"
+    }
+  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/:path*",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      }
     },
     {
       "source": "/(.*)",

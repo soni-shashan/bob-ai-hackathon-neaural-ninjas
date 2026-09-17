@@ -300,3 +300,48 @@ export interface NasaPowerLiveResponse {
   data?: NasaPowerObservation;
 }
 
+export interface IoTDeviceStatus {
+  device_id: string;
+  device_name: string;
+  asset_id: string;
+  device_type: string;
+  firmware_version: string;
+  is_active: boolean;
+  is_simulated?: boolean;
+  last_heartbeat?: string;
+  total_readings_sent: number;
+  created_at: string;
+}
+
+export interface IoTLog {
+  id: number;
+  device_id: string;
+  asset_id: string;
+  readings_count: number;
+  timestamp: string;
+  prediction_triggered: boolean;
+  prediction_result?: string;
+  failure_probability?: number;
+  health_score?: number;
+  is_anomaly?: boolean;
+  is_simulated?: boolean;
+}
+
+export interface IoTDeviceRegisterRequest {
+  device_name: string;
+  asset_id: string;
+  device_type?: string;
+  firmware_version?: string;
+  is_simulated?: boolean;
+}
+
+
+export interface IoTDeviceRegisterResponse {
+  device_id: string;
+  device_name: string;
+  asset_id: string;
+  api_key: string;
+  message: string;
+}
+
+

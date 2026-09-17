@@ -18,8 +18,13 @@ import {
   MLModelInfo,
   DemoStateResponse,
   DemoStage,
-  NasaPowerLiveResponse
+  NasaPowerLiveResponse,
+  IoTDeviceStatus,
+  IoTLog,
+  IoTDeviceRegisterRequest,
+  IoTDeviceRegisterResponse
 } from '../types';
+
 
 // Base API configuration: In production (Vercel) and local dev, requests use relative /api/* paths.
 // VITE_API_URL can optionally override the base URL if specified, but defaults to '' for relative /api/* routing.
@@ -287,3 +292,40 @@ export const resetDemo = (): Promise<DemoStateResponse> =>
   fetchJson<DemoStateResponse>('/api/demo/reset', {
     method: 'POST'
   });
+
+// 11. IoT Devices & Live Telemetry Logs
+export const getIoTDevices = (realOnly: boolean = false): Promise<IoTDeviceStatus[]> =>
+  fetchJson<IoTDeviceStatus[]>(`/api/iot/devices${realOnly ? '?real_only=true' : ''}`);
+
+export const registerIoTDevice = (data: IoTDeviceRegisterRequest): Promise<IoTDeviceRegisterResponse> =>
+  fetchJson<IoTDeviceRegisterResponse>('/api/iot/devices', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+
+export const deactivateIoTDevice = (deviceId: string): Promise<{ success: boolean; device_id: string; message: string }> =>
+  fetchJson(`/api/iot/devices/${encodeURIComponent(deviceId)}`, {
+    method: 'DELETE'
+  });
+
+export const getIoTLogs = (assetId?: string, limit: number = 50, realOnly: boolean = false): Promise<IoTLog[]> => {
+  const searchParams = new URLSearchParams();
+  if (assetId) searchParams.set('asset_id', assetId);
+  if (limit) searchParams.set('limit', limit.toString());
+  if (realOnly) searchParams.set('real_only', 'true');
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchJson<IoTLog[]>(`/api/iot/logs${query}`);
+};
+
+export const purgeIoTLogs = (simulatedOnly: boolean = true): Promise<{ success: boolean; purged_count: number; simulated_only: boolean }> =>
+  fetchJson(`/api/iot/logs?simulated_only=${simulatedOnly}`, {
+    method: 'DELETE'
+  });
+
+export const resetIoTSystem = (): Promise<{ success: boolean; deleted_devices: number; deleted_logs: number; message: string }> =>
+  fetchJson('/api/iot/reset', {
+    method: 'POST'
+  });
+
+
+

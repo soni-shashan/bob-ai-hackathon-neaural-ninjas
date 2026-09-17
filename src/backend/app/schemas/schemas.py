@@ -278,3 +278,125 @@ class DemoStateResponse(BaseModel):
     status_label: str
     stage_description: str
     last_updated: str
+
+
+# ── IoT Device & Sensor Data Ingestion Schemas ────────────────────────────
+
+class IoTSensorPayload(BaseModel):
+    """Single sensor reading from an IoT device."""
+    temperature: float = Field(..., description="Top oil temperature (°C)")
+    vibration: float = Field(..., description="Acoustic vibration (mm/s)")
+    partial_discharge: float = Field(..., description="Partial discharge activity (pC)")
+    oil_quality: float = Field(..., description="Dielectric oil quality index (0-100)")
+    load: float = Field(..., description="Active load (MW)")
+    ambient_temperature: Optional[float] = Field(32.0, description="Ambient temperature (°C)")
+    timestamp: Optional[str] = Field(None, description="ISO 8601 timestamp. Server generates if omitted.")
+
+    # Optional detailed IEEE C57.91 telemetry fields
+    oti: Optional[float] = None
+    wti: Optional[float] = None
+    ati: Optional[float] = None
+    oli: Optional[float] = None
+    oti_a: Optional[float] = 0.0
+    oti_t: Optional[float] = 0.0
+    vl1: Optional[float] = 240.0
+    vl2: Optional[float] = 240.0
+    vl3: Optional[float] = 240.0
+    il1: Optional[float] = None
+    il2: Optional[float] = None
+    il3: Optional[float] = None
+    inut: Optional[float] = 0.0
+
+
+class IoTBatchIngestRequest(BaseModel):
+    """Batch of sensor readings from an IoT device. API key passed via header."""
+    readings: List[IoTSensorPayload] = Field(..., min_length=1, max_length=500,
+                                              description="Array of sensor readings (1-500 per batch)")
+
+
+class IoTPredictionResult(BaseModel):
+    """ML prediction result for a single sensor reading."""
+    prediction: str
+    failure_probability: float
+    health_score: Optional[float] = None
+    is_anomaly: Optional[bool] = None
+    risk_level: str
+    dominant_risk_factor: Optional[str] = None
+    recommended_action: Optional[str] = None
+
+
+class IoTBatchIngestResponse(BaseModel):
+    """Response from batch data ingestion."""
+    success: bool
+    device_id: str
+    asset_id: str
+    readings_accepted: int
+    readings_rejected: int = 0
+    latest_prediction: Optional[IoTPredictionResult] = None
+    alerts: List[str] = []
+    message: str
+
+
+class IoTDeviceRegisterRequest(BaseModel):
+    """Request to register a new IoT device."""
+    device_name: str = Field(..., min_length=3, max_length=100)
+    asset_id: str = Field(..., description="Asset ID this device monitors (e.g., TR-104)")
+    device_type: Optional[str] = Field("sensor_gateway",
+                                        description="Device type: sensor_gateway, edge_node, plc, raspberry_pi")
+    firmware_version: Optional[str] = "1.0.0"
+    is_simulated: Optional[bool] = False
+
+
+class IoTDeviceRegisterResponse(BaseModel):
+    """Response after registering an IoT device. Contains the generated API key."""
+    device_id: str
+    device_name: str
+    asset_id: str
+    api_key: str = Field(..., description="Store securely. Shown only once.")
+    message: str
+
+
+class IoTDeviceStatusResponse(BaseModel):
+    """Status of a registered IoT device."""
+    device_id: str
+    device_name: str
+    asset_id: str
+    device_type: str
+    firmware_version: str
+    is_active: bool
+    is_simulated: bool = False
+    last_heartbeat: Optional[str] = None
+    total_readings_sent: int
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class IoTHeartbeatResponse(BaseModel):
+    """Response to device heartbeat."""
+    device_id: str
+    status: str
+    server_time: str
+    message: str
+
+
+class IoTLogResponse(BaseModel):
+    """Log record of IoT telemetry ingestion and automatic ML prediction."""
+    id: int
+    device_id: str
+    asset_id: str
+    readings_count: int
+    timestamp: str
+    prediction_triggered: bool
+    prediction_result: Optional[str] = None
+    failure_probability: Optional[float] = None
+    health_score: Optional[float] = None
+    is_anomaly: Optional[bool] = None
+    is_simulated: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+

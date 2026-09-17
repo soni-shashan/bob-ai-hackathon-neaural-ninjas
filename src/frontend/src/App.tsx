@@ -11,7 +11,9 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { WeatherPage } from './pages/WeatherPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { AdvisorPage } from './pages/AdvisorPage';
+import { IoTStreamPage } from './pages/IoTStreamPage';
 import { SettingsPage } from './pages/SettingsPage';
+
 
 /**
  * ProtectedRoute — redirects unauthenticated users to /login.
@@ -69,6 +71,7 @@ const AppRoutes: React.FC = () => {
         <Route path="weather" element={<WeatherPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
         <Route path="advisor" element={<AdvisorPage />} />
+        <Route path="iot" element={<IoTStreamPage />} />
         <Route path="settings" element={<SettingsPage />} />
         {/* Catch-all redirect to dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

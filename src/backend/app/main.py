@@ -19,17 +19,36 @@ from app.api.crews import router as crews_router
 from app.api.ml import router as ml_router
 from app.api.advisor import router as advisor_router
 from app.api.demo import router as demo_router
+from app.api.iot import router as iot_router
+
+def ensure_schema_updates(bind_engine):
+    """Safely adds new columns to existing SQLite database tables if missing."""
+    from sqlalchemy import text
+    with bind_engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE iot_devices ADD COLUMN is_simulated BOOLEAN DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE iot_data_logs ADD COLUMN is_simulated BOOLEAN DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create tables and seed data
     Base.metadata.create_all(bind=engine)
+    ensure_schema_updates(engine)
     db = SessionLocal()
     try:
         seed_database(db)
     finally:
         db.close()
     yield
+
     # Shutdown: Clean up resources if needed
 
 app = FastAPI(
@@ -76,3 +95,8 @@ app.include_router(crews_router, prefix=settings.API_PREFIX, dependencies=protec
 app.include_router(ml_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(advisor_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(demo_router, prefix=settings.API_PREFIX, dependencies=protected)
+
+# ── IoT Routes (mixed authentication) ──────────────────────────────────
+# IoT ingest and heartbeat use X-API-Key header auth (handled by iot_auth dependency)
+# IoT device management (register/list/get/delete) uses JWT auth
+app.include_router(iot_router, prefix=settings.API_PREFIX)

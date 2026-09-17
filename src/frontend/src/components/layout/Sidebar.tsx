@@ -8,6 +8,7 @@ import {
   CloudLightning,
   History,
   Bot,
+  Radio,
   Sliders,
   ShieldCheck,
   Zap,
@@ -20,12 +21,14 @@ import { getDashboardSummary } from '../../services/api';
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { path: '/assets', label: 'Grid Assets', icon: Cpu },
+  { path: '/iot', label: 'IoT Live Stream', icon: Radio, badge: 'Live', badgeVariant: 'cyan' },
   { path: '/risk-map', label: 'Risk Map', icon: MapPin },
   { path: '/maintenance', label: 'Maintenance', icon: Wrench, badge: 'Active', badgeVariant: 'danger' },
   { path: '/weather', label: 'Weather Intel', icon: CloudLightning, badge: 'Live', badgeVariant: 'warning' },
   { path: '/incidents', label: 'Incidents Log', icon: History },
   { path: '/advisor', label: 'AI Advisor', icon: Bot, badge: 'Live', badgeVariant: 'cyan' },
 ];
+
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();

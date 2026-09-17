@@ -128,3 +128,43 @@ class DemoScenarioState(Base):
     id = Column(Integer, primary_key=True, default=1)
     current_stage = Column(String(30), default="critical") # baseline, degradation, critical
     last_updated = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class IoTDevice(Base):
+    """Registered IoT sensor gateway / edge device linked to a specific transformer asset."""
+    __tablename__ = "iot_devices"
+
+    id = Column(String(50), primary_key=True, index=True)
+    api_key = Column(String(64), unique=True, nullable=False, index=True)
+    device_name = Column(String(100), nullable=False)
+    asset_id = Column(String(50), ForeignKey("assets.id"), nullable=False, index=True)
+    device_type = Column(String(50), default="sensor_gateway")  # sensor_gateway, edge_node, plc, raspberry_pi
+    firmware_version = Column(String(30), default="1.0.0")
+    last_heartbeat = Column(String(30), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_simulated = Column(Boolean, default=False)
+    created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+    total_readings_sent = Column(Integer, default=0)
+
+    asset = relationship("Asset")
+    data_logs = relationship("IoTDataLog", back_populates="device", cascade="all, delete-orphan")
+
+
+class IoTDataLog(Base):
+    """Tracks each IoT data ingestion batch and its associated ML prediction results."""
+    __tablename__ = "iot_data_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(String(50), ForeignKey("iot_devices.id"), nullable=False, index=True)
+    asset_id = Column(String(50), ForeignKey("assets.id"), nullable=False, index=True)
+    readings_count = Column(Integer, default=1)
+    timestamp = Column(String(30), nullable=False)
+    prediction_triggered = Column(Boolean, default=False)
+    prediction_result = Column(String(20), nullable=True)  # LOW_RISK, MODERATE_RISK, HIGH_RISK, CRITICAL_RISK
+    failure_probability = Column(Float, nullable=True)
+    health_score = Column(Float, nullable=True)
+    is_anomaly = Column(Boolean, nullable=True)
+    is_simulated = Column(Boolean, default=False)
+
+    device = relationship("IoTDevice", back_populates="data_logs")
+

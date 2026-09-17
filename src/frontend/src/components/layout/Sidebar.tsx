@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Cpu,
@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Zap,
   Activity,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardSummary } from '../../services/api';
@@ -29,12 +30,22 @@ const NAV_ITEMS = [
   { path: '/advisor', label: 'AI Advisor', icon: Bot, badge: 'Live', badgeVariant: 'cyan' },
 ];
 
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [gridHealth, setGridHealth] = useState<number>(71);
+
+  // Close sidebar on navigation (mobile)
+  useEffect(() => {
+    onClose();
+  }, [location.pathname]);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,163 +74,190 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 bg-[#0d131f] border-r border-[#1e2a3f] flex flex-col flex-shrink-0 min-h-screen">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-[#1e2a3f]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-700 flex items-center justify-center text-white shadow-md shadow-cyan-900/30">
-            <Zap className="w-6 h-6 fill-current" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-mono">
-              GridGuard <span className="text-cyan-400 font-extrabold text-xs px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800">AI</span>
-            </h1>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
-              Grid Resilience Advisor
-            </p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
 
-      {/* Main Navigation */}
-      <div className="flex-1 px-3 py-4 space-y-1">
-        <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
-          Operational Center
-        </div>
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
-                  isActive
-                    ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 shadow-sm font-semibold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <Icon className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-                <span>{item.label}</span>
+      {/* Sidebar Panel */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-[#0d131f] border-r border-[#1e2a3f] flex flex-col flex-shrink-0
+          transform transition-transform duration-300 ease-in-out
+          lg:relative lg:translate-x-0 lg:z-auto
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        {/* Brand Header */}
+        <div className="p-4 border-b border-[#1e2a3f]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-700 flex items-center justify-center text-white shadow-md shadow-cyan-900/30">
+                <Zap className="w-6 h-6 fill-current" />
               </div>
-              {item.badge && (
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                    item.badgeVariant === 'danger'
-                      ? 'bg-red-950/80 text-red-300 border-red-800'
-                      : item.badgeVariant === 'warning'
-                      ? 'bg-amber-950/80 text-amber-300 border-amber-800'
-                      : item.badgeVariant === 'cyan'
-                      ? 'bg-cyan-950/80 text-cyan-300 border-cyan-800'
-                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </NavLink>
-          );
-        })}
-
-        <div className="pt-6 px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
-          Configuration & Engine
-        </div>
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
-              isActive
-                ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`
-          }
-        >
-          <div className="flex items-center gap-3">
-            <Sliders className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-            <span>Risk Settings</span>
+              <div>
+                <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-mono">
+                  GridGuard <span className="text-cyan-400 font-extrabold text-xs px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800">AI</span>
+                </h1>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+                  Grid Resilience Advisor
+                </p>
+              </div>
+            </div>
+            {/* Mobile close button */}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </NavLink>
-      </div>
+        </div>
 
-      {/* System Status Panel in Footer */}
-      <div className="p-3 m-3 rounded-lg bg-[#121b2b] border border-[#1e2a3f]">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
-              Grid Status
+        {/* Main Navigation */}
+        <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
+            Operational Center
+          </div>
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
+                    isActive
+                      ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                      item.badgeVariant === 'danger'
+                        ? 'bg-red-950/80 text-red-300 border-red-800'
+                        : item.badgeVariant === 'warning'
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                        : item.badgeVariant === 'cyan'
+                        ? 'bg-cyan-950/80 text-cyan-300 border-cyan-800'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
+
+          <div className="pt-6 px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
+            Configuration & Engine
+          </div>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
+                isActive
+                  ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 font-semibold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3">
+              <Sliders className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+              <span>Risk Settings</span>
+            </div>
+          </NavLink>
+        </div>
+
+        {/* System Status Panel in Footer */}
+        <div className="p-3 m-3 rounded-lg bg-[#121b2b] border border-[#1e2a3f]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
+                Grid Status
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">
+              ONLINE
             </span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">
-            ONLINE
-          </span>
-        </div>
-        <div className="text-[11px] text-slate-400 flex items-center justify-between font-mono">
-          <span>Health Index</span>
-          <span className="text-white font-bold">{gridHealth}/100</span>
-        </div>
-        <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
-          <div
-            className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full transition-all duration-500"
-            style={{ width: `${Math.min(100, Math.max(0, gridHealth))}%` }}
-          />
-        </div>
-        <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-          <span>GridGuard AI</span>
-          <span className="font-mono text-cyan-400">v1.0.0</span>
-        </div>
-      </div>
-
-      {/* User Profile & Logout */}
-      <div className="p-3 mx-3 mb-3 rounded-lg bg-[#121b2b] border border-[#1e2a3f]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-xs font-bold font-mono flex-shrink-0">
-            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+          <div className="text-[11px] text-slate-400 flex items-center justify-between font-mono">
+            <span>Health Index</span>
+            <span className="text-white font-bold">{gridHealth}/100</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-200 leading-none truncate">
-              {user?.name || 'Admin'}
-            </p>
-            <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 truncate">
-              {user?.email || ''}
-            </p>
+          <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(0, gridHealth))}%` }}
+            />
           </div>
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            title="Sign Out"
-            className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition-colors flex-shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+            <span>GridGuard AI</span>
+            <span className="font-mono text-cyan-400">v1.0.0</span>
+          </div>
         </div>
-      </div>
 
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-5 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white font-mono mb-2">Confirm Logout</h3>
-            <p className="text-sm text-slate-400 mb-6">Are you sure you want to log out of the Grid Operations Center?</p>
-            <div className="flex items-center justify-end gap-3">
-              <button 
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 rounded text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-mono border border-transparent hover:border-slate-700"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmLogout}
-                className="px-4 py-2 rounded text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition-colors font-mono shadow-lg shadow-red-900/20"
-              >
-                Logout
-              </button>
+        {/* User Profile & Logout */}
+        <div className="p-3 mx-3 mb-3 rounded-lg bg-[#121b2b] border border-[#1e2a3f]">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-xs font-bold font-mono flex-shrink-0">
+              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-slate-200 leading-none truncate">
+                {user?.name || 'Admin'}
+              </p>
+              <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 truncate">
+                {user?.email || ''}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              title="Sign Out"
+              className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition-colors flex-shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Logout Confirmation Modal */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-5 max-w-sm w-full mx-4 shadow-2xl">
+              <h3 className="text-lg font-bold text-white font-mono mb-2">Confirm Logout</h3>
+              <p className="text-sm text-slate-400 mb-6">Are you sure you want to log out of the Grid Operations Center?</p>
+              <div className="flex items-center justify-end gap-3">
+                <button 
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-4 py-2 rounded text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-mono border border-transparent hover:border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmLogout}
+                  className="px-4 py-2 rounded text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition-colors font-mono shadow-lg shadow-red-900/20"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   );
 };
-

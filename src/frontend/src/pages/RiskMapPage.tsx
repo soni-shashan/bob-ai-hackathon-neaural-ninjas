@@ -136,7 +136,7 @@ export const RiskMapPage: React.FC = () => {
             <Compass className="w-3.5 h-3.5" />
             Geospatial Grid Risk Observatory
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
             Regional Electrical Sub-Transmission Network
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -169,7 +169,7 @@ export const RiskMapPage: React.FC = () => {
       </div>
 
       {/* Map Canvas with Sidebar Drawer */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]">
         {/* Full-width interactive Map View (8 cols) */}
         <div className="lg:col-span-8 bg-[#090d16] border border-[#1f2d44] rounded-lg shadow-xl relative overflow-hidden flex flex-col">
           {/* Map Top Bar */}

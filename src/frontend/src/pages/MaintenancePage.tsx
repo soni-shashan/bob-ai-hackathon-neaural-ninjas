@@ -89,7 +89,7 @@ export const MaintenancePage: React.FC = () => {
   const actions = plan?.actions || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -97,7 +97,7 @@ export const MaintenancePage: React.FC = () => {
             <Wrench className="w-3.5 h-3.5" />
             Decision-Support Dispatch Console
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
             Maintenance & Crew Pre-positioning Planner
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -116,7 +116,7 @@ export const MaintenancePage: React.FC = () => {
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           title="Critical Interventions"
           value={actions.filter((a) => a.priority === 1).length || 1}

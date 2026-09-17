@@ -357,7 +357,7 @@ export const AdvisorPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-4 sm:space-y-6 relative">
       {/* ── History Sidebar Overlay ─────────────────────────────────── */}
       {showHistory && (
         <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowHistory(false)}>
@@ -505,7 +505,7 @@ export const AdvisorPage: React.FC = () => {
               IBM Bob AI Real-Time Agent
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono flex items-center gap-2.5">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono flex items-center gap-2.5">
             GridGuard AI Advisor
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -546,7 +546,7 @@ export const AdvisorPage: React.FC = () => {
       </div>
 
       {/* Live Operational Status Ribbon */}
-      <div className="bg-[#0b1322] border border-cyan-900/40 rounded-lg px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+      <div className="bg-[#0b1322] border border-cyan-900/40 rounded-lg px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono overflow-hidden">
         <div className="flex items-center gap-2 text-slate-300">
           <Activity className="w-4 h-4 text-cyan-400" />
           <span className="text-cyan-300 font-semibold">Live Operational Grounding:</span>
@@ -584,7 +584,7 @@ export const AdvisorPage: React.FC = () => {
       </div>
 
       {/* Real-time Dialogue Message Stream */}
-      <div className="space-y-4 min-h-[380px]">
+      <div className="space-y-3 sm:space-y-4 min-h-[300px] sm:min-h-[380px]">
         {messages.map((m) => {
           const isUser = m.sender === 'user';
           return (
@@ -610,12 +610,12 @@ export const AdvisorPage: React.FC = () => {
 
               {isUser ? (
                 /* Operator Chat Bubble */
-                <div className="max-w-2xl bg-cyan-950/80 border border-cyan-700/70 text-cyan-100 rounded-xl rounded-tr-sm p-3.5 text-xs font-mono shadow-lg leading-relaxed">
+                <div className="max-w-[85vw] sm:max-w-xl md:max-w-2xl bg-cyan-950/80 border border-cyan-700/70 text-cyan-100 rounded-xl rounded-tr-sm p-2.5 sm:p-3.5 text-xs font-mono shadow-lg leading-relaxed">
                   {m.text}
                 </div>
               ) : m.response ? (
                 /* Structured Operational Response Format */
-                <div className="max-w-3xl w-full bg-[#111827] border border-[#1f2d44] rounded-xl rounded-tl-sm p-5 shadow-xl space-y-4 font-mono text-xs">
+                <div className="max-w-[90vw] sm:max-w-2xl md:max-w-3xl w-full bg-[#111827] border border-[#1f2d44] rounded-xl rounded-tl-sm p-3 sm:p-5 shadow-xl space-y-3 sm:space-y-4 font-mono text-xs">
                   {/* Summary & Priority Header */}
                   <div className="flex flex-wrap items-center justify-between border-b border-[#1f2d44] pb-3 gap-2">
                     <div className="flex items-start gap-2.5 flex-1">

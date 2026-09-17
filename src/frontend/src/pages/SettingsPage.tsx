@@ -24,14 +24,14 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl">
       {/* Header */}
       <div className="border-b border-[#1f2d44] pb-4">
         <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 uppercase tracking-wider mb-1">
           <Sliders className="w-3.5 h-3.5" />
           Grid Resilience Engine Configuration
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
           System Settings & Risk Formula Weights
         </h1>
         <p className="text-xs text-slate-400 mt-0.5">
@@ -40,7 +40,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Formula Explanation Banner */}
-      <div className="bg-[#0b1322] border border-cyan-900/40 rounded-lg p-4 text-xs font-mono flex items-start gap-3">
+      <div className="bg-[#0b1322] border border-cyan-900/40 rounded-lg p-3 sm:p-4 text-xs font-mono flex items-start gap-3">
         <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
           <div className="text-cyan-300 font-bold">
@@ -49,7 +49,7 @@ export const SettingsPage: React.FC = () => {
           <p className="text-slate-300 font-sans leading-relaxed">
             Composite failure risk is calculated dynamically for each high-voltage asset according to:
           </p>
-          <div className="bg-slate-950/80 px-3 py-1.5 rounded border border-slate-800 text-cyan-200 text-[11px] font-mono inline-block mt-1">
+          <div className="bg-slate-950/80 px-2 sm:px-3 py-1.5 rounded border border-slate-800 text-cyan-200 text-[10px] sm:text-[11px] font-mono inline-block mt-1 overflow-x-auto max-w-full">
             Risk = (w<sub>eq</sub> × Equipment Failure) + (w<sub>weather</sub> × Meteorological Stress) + (w<sub>impact</sub> × Customer Load) + (w<sub>crit</sub> × Substation Criticality)
           </div>
         </div>
@@ -58,9 +58,9 @@ export const SettingsPage: React.FC = () => {
       {/* Risk Engine Weights Form */}
       <form
         onSubmit={handleSave}
-        className="bg-[#111827] border border-[#1f2d44] rounded-lg p-6 shadow-xl space-y-6"
+        className="bg-[#111827] border border-[#1f2d44] rounded-lg p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6"
       >
-        <div className="flex items-center justify-between border-b border-[#1f2d44] pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1f2d44] pb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2">
             <Scale className="w-4 h-4 text-cyan-400" />
             Composite Risk Formula Weights

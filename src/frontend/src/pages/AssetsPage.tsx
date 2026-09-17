@@ -123,7 +123,7 @@ export const AssetsPage: React.FC = () => {
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -131,7 +131,7 @@ export const AssetsPage: React.FC = () => {
             <Cpu className="w-3.5 h-3.5" />
             Grid Asset Fleet Inventory
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
             High-Voltage Substation Equipment
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -158,7 +158,7 @@ export const AssetsPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-4 shadow-lg space-y-3">
+      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-3 sm:p-4 shadow-lg space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Box */}
           <div className="relative">
@@ -365,7 +365,7 @@ export const AssetsPage: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        <div className="p-3 bg-[#0e1626] border-t border-[#1f2d44] flex items-center justify-between text-xs font-mono text-slate-400">
+        <div className="p-3 bg-[#0e1626] border-t border-[#1f2d44] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-slate-400">
           <div>
             Showing <strong className="text-white">{assets.length}</strong> of{' '}
             <strong className="text-white">{total}</strong> assets

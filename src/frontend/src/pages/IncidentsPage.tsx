@@ -67,7 +67,7 @@ export const IncidentsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -75,7 +75,7 @@ export const IncidentsPage: React.FC = () => {
             <History className="w-3.5 h-3.5" />
             Grid Failure Archive & Reliability Forensics
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
             Historical Outages & Component Incident Log
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -89,7 +89,7 @@ export const IncidentsPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-3 sm:p-4 shadow-lg flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-2 w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400" />
           <input
@@ -101,7 +101,7 @@ export const IncidentsPage: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
           <span className="text-slate-400">Severity Filter:</span>
           {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => (
             <button
@@ -120,7 +120,7 @@ export const IncidentsPage: React.FC = () => {
       </div>
 
       {/* Incidents Table & Incident Detail Drawer */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Table (7 cols) */}
         <div className="lg:col-span-7 bg-[#111827] border border-[#1f2d44] rounded-lg shadow-xl overflow-hidden">
           <div className="p-3.5 border-b border-[#1f2d44] bg-[#0e1626] flex items-center justify-between text-xs font-mono">

@@ -154,16 +154,16 @@ export const IoTStreamPage: React.FC = () => {
   const realCollectorCmd = "python src/iot_sdk/examples/real_hardware_collector.py --asset-id TR-104 --interval 3";
 
   return (
-    <div className="p-6 space-y-6 bg-[#0b0f17] min-h-screen text-slate-100 font-sans">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 bg-[#0b0f17] min-h-screen text-slate-100 font-sans">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e2a3f] pb-5">
+      <div className="flex flex-col gap-4 border-b border-[#1e2a3f] pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <Radio className="w-6 h-6 text-cyan-400 animate-pulse" />
-            <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+            <Radio className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 animate-pulse" />
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
               Live IoT Device Ingestion Gateway
             </h1>
-            <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 flex items-center gap-1.5">
+            <span className="hidden md:inline-flex px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 items-center gap-1.5">
               <ArrowUpRight className="w-3.5 h-3.5" />
               PUSH ARCHITECTURE (DEVICE → SERVER)
             </span>
@@ -244,7 +244,7 @@ export const IoTStreamPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-[#111827] border border-[#1f2d44] rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-slate-400 text-xs font-mono uppercase">Connected Devices</p>

@@ -83,7 +83,7 @@ export const WeatherPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -91,7 +91,7 @@ export const WeatherPage: React.FC = () => {
             <CloudLightning className="w-3.5 h-3.5" />
             Meteorological Intelligence & Grid Weather Exposure
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
             Severe Storm Radar & Multi-Zone Forecast
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -170,7 +170,7 @@ export const WeatherPage: React.FC = () => {
         </div>
 
         {/* 6 Metric Panels */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-[#0d1424]">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 p-3 sm:p-4 bg-[#0d1424]">
           <div className="p-3 rounded bg-slate-900/90 border border-slate-800">
             <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-slate-400 mb-1">
               <Thermometer className="w-3.5 h-3.5 text-orange-400" />
@@ -329,8 +329,8 @@ export const WeatherPage: React.FC = () => {
       </div>
 
       {/* 7-DAY OUTLOOK FORECAST CARDS */}
-      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-5 shadow-xl">
-        <div className="flex items-center justify-between border-b border-[#1f2d44] pb-3 mb-4">
+      <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-3 sm:p-5 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1f2d44] pb-3 mb-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-cyan-400" />
             7-Day Synoptic Weather Outlook & Grid Stress

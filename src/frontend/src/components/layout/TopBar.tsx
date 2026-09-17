@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ShieldAlert, CloudRain, Bell, UserCheck, Radio } from 'lucide-react';
+import { Clock, ShieldAlert, CloudRain, Bell, UserCheck, Radio, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  onMenuToggle: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onMenuToggle }) => {
   const { user } = useAuth();
   const [timeStr, setTimeStr] = useState<string>('');
   const [dateStr, setDateStr] = useState<string>('');
@@ -35,28 +39,38 @@ export const TopBar: React.FC = () => {
   }, []);
 
   return (
-    <header className="h-14 bg-[#0d131f] border-b border-[#1e2a3f] flex items-center justify-between px-6 z-20 flex-shrink-0">
-      {/* Left: Operational Title & Grid Region */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
+    <header className="h-14 bg-[#0d131f] border-b border-[#1e2a3f] flex items-center justify-between px-3 sm:px-4 md:px-6 z-20 flex-shrink-0">
+      {/* Left: Hamburger + Operational Title & Grid Region */}
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        {/* Mobile hamburger menu */}
+        <button
+          onClick={onMenuToggle}
+          className="lg:hidden p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors flex-shrink-0"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </span>
-          <span className="text-xs font-mono uppercase tracking-wider font-semibold text-slate-200">
-            Grid Operations Center
+          <span className="text-xs font-mono uppercase tracking-wider font-semibold text-slate-200 truncate">
+            <span className="hidden sm:inline">Grid Operations Center</span>
+            <span className="sm:hidden">GridOps</span>
           </span>
         </div>
-        <span className="text-slate-700 hidden sm:inline">|</span>
-        <span className="text-xs text-slate-400 hidden sm:inline font-mono">
+        <span className="text-slate-700 hidden md:inline">|</span>
+        <span className="text-xs text-slate-400 hidden md:inline font-mono truncate">
           Regional Power Grid • Transmission & Distribution Operations
         </span>
       </div>
 
       {/* Right: Telemetry Time, Weather Alert Indicator, Notifications & User */}
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-5 flex-shrink-0">
         {/* Real-time Clock */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
           <Clock className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-white font-bold tracking-tight">{timeStr}</span>
           <span className="text-slate-500 text-[10px]">UTC+5:30</span>
@@ -67,11 +81,11 @@ export const TopBar: React.FC = () => {
         {/* Severe Weather Warning Pill */}
         <Link
           to="/weather"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/40 border border-amber-800/80 text-amber-300 text-xs font-mono hover:bg-amber-900/50 transition-colors"
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-amber-950/40 border border-amber-800/80 text-amber-300 text-xs font-mono hover:bg-amber-900/50 transition-colors"
         >
-          <CloudRain className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-          <span className="hidden sm:inline font-semibold">East Grid Storm Alert</span>
-          <span className="bg-amber-900/80 px-1 py-0.2 text-[10px] rounded border border-amber-700">
+          <CloudRain className="w-3.5 h-3.5 text-amber-400 animate-pulse flex-shrink-0" />
+          <span className="hidden sm:inline font-semibold truncate">East Grid Storm Alert</span>
+          <span className="hidden md:inline bg-amber-900/80 px-1 py-0.2 text-[10px] rounded border border-amber-700">
             48mm/h
           </span>
         </Link>
@@ -79,7 +93,7 @@ export const TopBar: React.FC = () => {
         {/* Notifications Icon */}
         <Link
           to="/dashboard"
-          className="relative p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          className="relative p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors flex-shrink-0"
         >
           <Bell className="w-4 h-4" />
           <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500"></span>
@@ -87,7 +101,7 @@ export const TopBar: React.FC = () => {
 
         {/* Operator Profile */}
         <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 border border-cyan-800 flex items-center justify-center text-white text-xs font-bold font-mono">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 border border-cyan-800 flex items-center justify-center text-white text-xs font-bold font-mono flex-shrink-0">
             {user?.name?.charAt(0)?.toUpperCase() || 'A'}
           </div>
           <div className="hidden lg:block text-left">

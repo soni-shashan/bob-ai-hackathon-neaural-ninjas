@@ -125,7 +125,7 @@ export const AssetDetailPage: React.FC = () => {
   const failureProb = risk?.failure_probability ?? asset.failure_probability;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Back button and Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -137,7 +137,7 @@ export const AssetDetailPage: React.FC = () => {
             Back to Grid Fleet
           </button>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold font-mono text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold font-mono text-white tracking-tight">
               {asset.name}
             </h1>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
@@ -154,7 +154,7 @@ export const AssetDetailPage: React.FC = () => {
         </div>
 
         {/* Live Risk Hero Card */}
-        <div className="flex items-center gap-4 bg-[#111827] border border-[#1f2d44] p-3 rounded-lg shadow-lg">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 bg-[#111827] border border-[#1f2d44] p-3 rounded-lg shadow-lg">
           <div>
             <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
               Composite Failure Risk
@@ -172,7 +172,7 @@ export const AssetDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-l border-slate-800 pl-4">
+          <div className="sm:border-l sm:border-slate-800 sm:pl-4">
             <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
               Failure Likelihood
             </div>
@@ -341,9 +341,9 @@ export const AssetDetailPage: React.FC = () => {
       </div>
 
       {/* THREE-COLUMN DIAGNOSTIC GRID: Health Breakdown, Risk Explanation, Weather & Grid Impact */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Column 1: Asset Health Score Diagnostic */}
-        <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-5 shadow-xl space-y-4">
+        <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-3 sm:p-5 shadow-xl space-y-4">
           <div className="border-b border-[#1f2d44] pb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2">
               <HeartPulse className="w-4 h-4 text-cyan-400" />

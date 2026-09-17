@@ -211,31 +211,31 @@ export const IoTStreamPage: React.FC = () => {
       </div>
 
       {/* Real Hardware Push Banner */}
-      <div className="bg-[#111827] border border-cyan-800/60 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg shadow-cyan-950/20">
-        <div className="flex items-start gap-3">
+      <div className="bg-[#111827] border border-cyan-800/60 rounded-xl p-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-lg shadow-cyan-950/20">
+        <div className="flex items-start gap-3 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-cyan-950 border border-cyan-700 flex items-center justify-center text-cyan-400 flex-shrink-0 mt-0.5">
             <Terminal className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold font-mono text-white flex items-center gap-2">
-              Push Live Sensor Data from Real Hardware / Laptop / Pi
-              <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold font-mono text-white flex flex-wrap items-center gap-2">
+              <span>Push Live Sensor Data from Real Hardware / Laptop / Pi</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono whitespace-nowrap">
                 DEVICE → SERVER PUSH
               </span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5 font-mono">
+            <p className="text-xs text-slate-400 mt-1 font-mono">
               Run this command in terminal to push real physical Linux thermal sensors (<span className="text-cyan-300">/sys/class/thermal</span>), load (<span className="text-cyan-300">/proc/loadavg</span>), and interrupts into GridGuard AI:
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto flex-shrink-0">
-          <code className="bg-[#0b0f17] border border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-cyan-300 overflow-x-auto max-w-full">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto min-w-0">
+          <code className="flex-1 bg-[#0b0f17] border border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-cyan-300 overflow-x-auto whitespace-nowrap scrollbar-thin min-w-0">
             {realCollectorCmd}
           </code>
           <button
             onClick={() => copyToClipboard(realCollectorCmd, true)}
-            className="px-3 py-1.5 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 text-xs font-mono font-bold flex items-center gap-1 flex-shrink-0"
+            className="px-3 py-1.5 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 text-xs font-mono font-bold flex items-center justify-center gap-1 flex-shrink-0 transition-colors"
           >
             {copiedCommand ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             {copiedCommand ? 'Copied' : 'Copy'}

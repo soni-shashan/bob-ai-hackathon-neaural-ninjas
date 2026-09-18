@@ -1,5 +1,5 @@
 {
-  "engine": "IEEE C57.91-inspired Physics Health Score",
+  "engine": "IEEE C57.91-inspired Physics Health Score (Enhanced)",
   "max_score": 100.0,
   "penalties": {
     "thermal_max": 35.0,
@@ -23,5 +23,16 @@
       0.0,
       39.9
     ]
+  },
+  "data_calibration": {
+    "oti_p50": 29.0,
+    "oti_p90": 38.0,
+    "oti_p99": 48.0,
+    "wti_p50": 0.0,
+    "ati_range": [
+      0.0,
+      44.0
+    ],
+    "oli_p10": 39.0
   }
 }

@@ -1,0 +1,110 @@
+{
+  "best_model": "XGBoost",
+  "optimal_threshold": 0.1,
+  "feature_cols": [
+    "OTI",
+    "WTI",
+    "ATI",
+    "OLI",
+    "OTI_A",
+    "OTI_T",
+    "VL1",
+    "VL2",
+    "VL3",
+    "IL1",
+    "IL2",
+    "IL3",
+    "VL12",
+    "VL23",
+    "VL31",
+    "INUT",
+    "hour_sin",
+    "hour_cos",
+    "temp_rise",
+    "wti_oti_ratio",
+    "thermal_stress",
+    "v_avg",
+    "i_avg",
+    "apparent_power",
+    "v_unbalance_pct",
+    "i_unbalance_pct",
+    "OTI_rolling_mean_3",
+    "OTI_rolling_std_3",
+    "OTI_diff",
+    "WTI_rolling_mean_3",
+    "WTI_rolling_std_3",
+    "WTI_diff",
+    "OLI_rolling_mean_3",
+    "OLI_rolling_std_3",
+    "OLI_diff",
+    "oli_low_risk",
+    "oli_high_risk",
+    "neutral_ratio"
+  ],
+  "n_features": 38,
+  "model_comparison": {
+    "ExtraTrees": {
+      "accuracy": 0.073,
+      "precision": 0.0722,
+      "recall": 1.0,
+      "f1": 0.1347,
+      "roc_auc": 0.6133,
+      "pr_auc": 0.0941,
+      "optimal_threshold": 0.72
+    },
+    "GradientBoosting": {
+      "accuracy": 0.0733,
+      "precision": 0.0722,
+      "recall": 1.0,
+      "f1": 0.1348,
+      "roc_auc": 0.4465,
+      "pr_auc": 0.0726,
+      "optimal_threshold": 0.56
+    },
+    "XGBoost": {
+      "accuracy": 0.073,
+      "precision": 0.0722,
+      "recall": 1.0,
+      "f1": 0.1347,
+      "roc_auc": 0.6292,
+      "pr_auc": 0.1429,
+      "optimal_threshold": 0.1
+    },
+    "LightGBM": {
+      "accuracy": 0.073,
+      "precision": 0.0722,
+      "recall": 1.0,
+      "f1": 0.1347,
+      "roc_auc": 0.5913,
+      "pr_auc": 0.1073,
+      "optimal_threshold": 0.1
+    }
+  },
+  "test_metrics_default_threshold": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "roc_auc": NaN,
+    "pr_auc": 0.0
+  },
+  "test_metrics_optimized_threshold": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "roc_auc": NaN,
+    "pr_auc": 0.0
+  },
+  "confusion_matrix": [
+    [
+      0,
+      7921
+    ],
+    [
+      0,
+      0
+    ]
+  ],
+  "training_timestamp": "2026-09-18T20:31:27.632393"
+}

@@ -7,37 +7,80 @@ from app.database.session import get_db
 from app.models.models import Asset, SensorReading, MaintenanceAction, DemoScenarioState
 from app.schemas.schemas import AssetBase, AssetCreate, AssetListResponse
 from app.services.risk_engine import risk_engine
+from app.services.dataset_feed_service import dataset_feed_service
+from app.ml.health_score import compute_health_score_single
+from app.ml.anomaly_detector import anomaly_detector
+from app.ml.mog_classifier import mog_classifier
+from app.ml.equipment_risk import equipment_risk_engine
+from app.ml.weather_engine import weather_risk_engine
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 
 def _hydrate_asset(a: Asset, stage: Optional[str] = None) -> AssetBase:
-    if stage == "baseline" and a.id == "TR-104":
-        risk = 42
-        prob = 0.28
-        health = 72
-        status = "OPERATIONAL"
-        w_risk = "LOW"
-    elif stage == "degradation" and a.id == "TR-104":
-        risk = 68
-        prob = 0.58
-        health = 55
-        status = "WARNING"
-        w_risk = "MEDIUM"
-    elif stage == "critical" and a.id == "TR-104":
-        risk = 94
-        prob = 0.82
-        health = 42
-        status = "CRITICAL"
-        w_risk = "HIGH"
+    # 1. Fetch real telemetry slice based on stage or asset ID
+    if a.id == "TR-104" and stage:
+        slice_df = dataset_feed_service.get_stage_slice(stage)
     else:
-        # Dynamic calculation directly from real telemetry and health score in database
+        slice_df = dataset_feed_service.get_asset_slice(a.id)
+
+    if not slice_df.empty:
+        row = slice_df.iloc[-1]
+        oti = float(row.get("OTI", 70.0))
+        wti = float(row.get("WTI", oti + 10.0))
+        ati = float(row.get("ATI", 32.0))
+        oli = float(row.get("OLI", 75.0))
+        vl1, vl2, vl3 = float(row.get("VL1", 240.0)), float(row.get("VL2", 239.5)), float(row.get("VL3", 240.2))
+        il1, il2, il3 = float(row.get("IL1", 75.0)), float(row.get("IL2", 74.0)), float(row.get("IL3", 76.0))
+        inut = float(row.get("INUT", 1.5))
+        oti_a = float(row.get("OTI_A", 0.0))
+        oti_t = float(row.get("OTI_T", 0.0))
+
+        # 2. Stage 3: IEEE C57.91 Physics Health Score ML Model
+        h_res = compute_health_score_single(
+            oti=oti, wti=wti, ati=ati, oli=oli, oti_a=oti_a, oti_t=oti_t,
+            vl1=vl1, vl2=vl2, vl3=vl3, il1=il1, il2=il2, il3=il3, inut=inut
+        )
+        health = int(round(h_res["health_score"]))
+
+        # 3. Stage 4: Condition-Aware Isolation Forest Anomaly Detection ML Model
+        a_res = anomaly_detector.predict_anomaly_single(
+            oti=oti, ati=ati, oli=oli,
+            vl1=vl1, vl2=vl2, vl3=vl3, il1=il1, il2=il2, il3=il3
+        )
+
+        # 4. Stage 2: XGBoost MOG Alarm Classifier ML Model
+        m_res = mog_classifier.predict_mog_alarm(
+            oti=oti, wti=wti, ati=ati, oli=oli, oti_a=oti_a, oti_t=oti_t,
+            vl1=vl1, vl2=vl2, vl3=vl3, il1=il1, il2=il2, il3=il3, inut=inut
+        )
+
+        # 5. Stage 5: Non-Linear Equipment Risk Fusion ML Engine
+        r_res = equipment_risk_engine.evaluate_risk(
+            health_score=h_res["health_score"],
+            normalized_anomaly_risk=a_res["normalized_anomaly_risk"],
+            is_anomaly=a_res["is_anomaly"],
+            mog_probability=m_res["mog_probability"]
+        )
+        risk = int(round(r_res["equipment_risk_score"]))
+        prob = round(float(r_res["failure_probability"]), 2)
+
+        # 6. Stage 6: NASA POWER Sigmoidal Weather Risk Model
+        w_res = weather_risk_engine.evaluate_weather_risk(
+            temperature_c=ati,
+            humidity_pct=85.0 if a.grid_zone == "East Grid" else 55.0,
+            wind_speed_ms=14.0 if a.grid_zone == "East Grid" else 6.0,
+            precipitation_mm=4.8 if a.grid_zone == "East Grid" else 0.5,
+            equipment_risk_score=r_res["equipment_risk_score"]
+        )
+        w_risk = w_res["weather_risk_level"]
+        status = "CRITICAL" if risk >= 75 else ("WARNING" if risk >= 50 else "OPERATIONAL")
+    else:
+        # Fallback to database health score if CSV slice is empty
         health = a.health_score
-        base_risk = 100 - health
-        bonus = 14 if health < 50 else (8 if health < 75 else 2)
-        risk = min(98, max(12, int(round(base_risk + bonus))))
-        prob = round(min(0.95, max(0.08, risk / 115.0)), 2)
-        status = "CRITICAL" if risk >= 75 else ("HIGH" if risk >= 50 else ("WARNING" if risk >= 25 else "OPERATIONAL"))
-        w_risk = "HIGH" if a.grid_zone == "East Grid" else ("MEDIUM" if a.grid_zone in ["North Grid", "Central Grid"] else "LOW")
+        risk = 100 - health
+        prob = round(min(0.95, max(0.08, risk / 100.0)), 2)
+        status = "CRITICAL" if risk >= 75 else ("WARNING" if risk >= 50 else "OPERATIONAL")
+        w_risk = "HIGH" if a.grid_zone == "East Grid" else "LOW"
 
     return AssetBase(
         id=a.id,

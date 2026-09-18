@@ -1,6 +1,9 @@
 """
-GridGuard AI Machine Learning Package
-Exposes physics health scoring, condition-aware anomaly detection, MOG classifier, and risk evaluation.
+GridGuard AI Machine Learning Package (Enhanced v2.0)
+Exposes physics health scoring, condition-aware anomaly detection,
+MOG classifier, risk evaluation, and weather risk engine.
+All models enhanced with: multi-model ensemble, expanded feature engineering,
+non-linear risk fusion, and data-calibrated thresholds.
 """
 
 from app.ml.health_score import compute_health_score_single, compute_equipment_health_score_clean

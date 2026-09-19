@@ -313,11 +313,12 @@ export const subscribeToDashboardStream = (onUpdate: (data: any) => void): (() =
 export const askAdvisor = (
   question: string,
   history?: ChatHistoryItem[],
-  assetId?: string
+  assetId?: string,
+  language?: string
 ): Promise<AdvisorQueryResponse> =>
   fetchJson<AdvisorQueryResponse>('/api/advisor/query', {
     method: 'POST',
-    body: JSON.stringify({ question, history, asset_id: assetId })
+    body: JSON.stringify({ question, history, asset_id: assetId, language })
   });
 
 // 10. Demo Scenario Controller

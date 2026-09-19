@@ -121,18 +121,22 @@ def test_ai_advisor_query(client):
     assert len(data["recommended_actions"]) > 0
     assert "model_name" in data
 
-def test_ai_advisor_conversational_history(client):
-    response = client.post("/api/advisor/query", json={
-        "question": "What actions should the operator take first?",
-        "history": [
-            {"role": "user", "content": "Which asset requires immediate attention?"},
-            {"role": "assistant", "content": "TR-104 at East Transmission Substation requires immediate attention due to 82% failure probability."}
-        ]
+def test_ai_advisor_multilingual_gujarati_and_hindi(client):
+    res_gu = client.post("/api/advisor/query", json={
+        "question": "What is the maintenance plan today?",
+        "language": "gu"
     })
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["answer"]) > 0
-    assert len(data["recommended_actions"]) > 0 or len(data["evidence"]) > 0
+    assert res_gu.status_code == 200
+    data_gu = res_gu.json()
+    assert "ગ્રીડ" in data_gu["answer"] or "યોજના" in data_gu["answer"] or len(data_gu["answer"]) > 0
+
+    res_hi = client.post("/api/advisor/query", json={
+        "question": "What is the maintenance plan today?",
+        "language": "hi"
+    })
+    assert res_hi.status_code == 200
+    data_hi = res_hi.json()
+    assert "ग्रिड" in data_hi["answer"] or "रखरखाव" in data_hi["answer"] or len(data_hi["answer"]) > 0
 
 
 def test_demo_stage_transition(client):

@@ -109,11 +109,13 @@ class AdvisorService:
         db: Session,
         question: str,
         asset_id: Optional[str] = None,
-        history: Optional[List[ChatMessagePayload]] = None
+        history: Optional[List[ChatMessagePayload]] = None,
+        language: Optional[str] = "en"
     ) -> Optional[AdvisorQueryResponse]:
         """
         Executes a real-time completion request against the IBM Bob AI API.
         Enforces whole-system operational perspective for general inquiries.
+        Supports language localization (English, Gujarati, Hindi).
         """
         if not settings.BOB_AI_API_KEY:
             return None
@@ -125,6 +127,14 @@ class AdvisorService:
             fleet_count = db.query(Asset).filter(~Asset.id.like("TR-TEST-%")).count()
         except Exception:
             fleet_count = 26
+
+        lang_name = "Gujarati" if language == "gu" else ("Hindi" if language == "hi" else "English")
+        lang_instruction = ""
+        if language in ["gu", "hi"]:
+            lang_instruction = (
+                f"\n7. CRITICAL MULTILINGUAL REQUIREMENT: The operator selected language is '{lang_name}' ({language}).\n"
+                f"You MUST return all fields in your JSON response ('answer', 'evidence', 'recommended_actions', 'expected_impact') written ENTIRELY in native {lang_name} script (Gujarati script for Gujarati, Devanagari script for Hindi).\n"
+            )
 
         system_prompt = (
             "You are GridGuard AI, an expert real-time electrical grid resilience, reliability, and operations advisor powered by IBM Bob AI.\n"
@@ -149,6 +159,7 @@ class AdvisorService:
             '  "related_asset_id": null\n'
             "}\n"
             "6. Always return strictly JSON (or markdown codeblock with ```json ... ```)."
+            f"{lang_instruction}"
         )
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -250,11 +261,271 @@ class AdvisorService:
             return None
 
     @classmethod
+    def _localize_heuristic_response(
+        cls,
+        resp: AdvisorQueryResponse,
+        language: Optional[str],
+        question: str
+    ) -> AdvisorQueryResponse:
+        """
+        Translates local heuristic response into Gujarati (gu) or Hindi (hi) if requested.
+        """
+        if not language or language not in ["gu", "hi"]:
+            return resp
+
+        q_lower = question.lower().strip()
+
+        if language == "gu":
+            if "tr-104" in q_lower and ("fail" in q_lower or "impact" in q_lower or "happens" in q_lower):
+                return AdvisorQueryResponse(
+                    answer="ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન ખાતે ટ્રાન્સફોર્મર TR-104 ની બિન-અટકાવેલ નિષ્ફળતાથી 18,500 ગ્રાહકોને અસર કરતી તાત્કાલિક પ્રાદેશિક વીજ કાપ સર્જાશે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "પૂર્વ ઔદ્યોગિક ક્ષેત્રના 18,500 ગ્રાહક મીટર ખાતાઓમાં તાત્કાલિક વીજ કાપ",
+                        "42.0 MW ઔદ્યોગિક અને નગરપાલિકા ફીડર ક્ષમતાનું નુકસાન",
+                        "પ્રાદેશિક હોસ્પિટલ અને વોટર પમ્પિંગ સ્ટેશનો પર સંભવિત અસર",
+                        "પૂર્વ-તૈયારી વિના ઈમરજન્સી પુનઃસ્થાપના સમય: 4 થી 7 કલાક"
+                    ],
+                    recommended_actions=[
+                        "10 કિમી ની મર્યાદામાં થર્મલ ઈમેજિંગ વાન સાથે ક્રૂ 2 ને તૈનાત કરો",
+                        "ઓટોમેટેડ 220kV બસબાર લિંક દ્વારા લોડ-ટ્રાન્સફર મોડ શરૂ કરો",
+                        "મહત્વપૂર્ણ ઔદ્યોગિક અને ગ્રાહક હિતધારકોને સ્ટેન્ડબાય પ્રોટોકોલ વિશે જાણ કરો"
+                    ],
+                    expected_impact="પૂર્વ-તૈયારી અને ઓટોમેટેડ સ્વિચિંગથી વીજ કાપની સંભાવના 82% થી ઘટીને 24% નીચે આવે છે, જે $1.2M નું આર્થિક નુકસાન અટકાવે છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+            elif "tr-104" in q_lower or ("why" in q_lower and "104" in q_lower):
+                return AdvisorQueryResponse(
+                    answer="ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન ખાતે ટ્રાન્સફોર્મર TR-104 ને તેની ગંભીર ઇન્સ્યુલેશન ક્ષતિ અને ઉચ્ચ ગ્રાહક નિર્ભરતાના કારણે સર્વોચ્ચ ગંભીર સાધન ગણવામાં આવે છે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "એમએલ fault નિદાન મોડલ્સમાંથી અનુમાનિત નિષ્ફળતાની સંભાવના: 82%",
+                        "પાર્શિયલ ડિસ્ચાર્જ પ્રવૃત્તિ ડાયઈલેક્ટ્રિક સુરક્ષા બેઝલાઇન કરતાં +31% વધુ",
+                        "વાઇન્ડિંગ તાપમાન ઐતિહાસિક 7-દિવસના ધોરણ કરતાં 18°C વધુ ચાલુ છે",
+                        "પૂર્વ કોરિડોરના વાવાઝોડાના સીધા માર્ગમાં (48.5 mm/h વરસાદ, 52 km/h પવન)",
+                        "18,500 ગ્રાહકો અને 42.0 MW લોડ કે જેમાં કોઈ તાત્કાલિક સેકન્ડરી લિંક નથી"
+                    ],
+                    recommended_actions=[
+                        "તાત્કાલિક થર્મલ સ્કેન અને ઓઇલ ડીજીએ ટેસ્ટ માટે ઈમરજન્સી ડાયગ્નોસ્ટિક ક્રૂ 2 ને રવાના કરો",
+                        "સેન્ટ્રલ વેરહાઉસ ખાતે હાઇ-વોલ્ટેજ બુશિંગ એસેમ્બલી સ્ટેજ કરો",
+                        "અડીને આવેલા 220kV ફીડર્સમાં લોડ-શેડિંગ અને ટ્રાન્સફર પ્રોટોકોલ તૈયાર કરો"
+                    ],
+                    expected_impact="તાત્કાલિક હસ્તક્ષેપ ગંભીર ડાયઈલેક્ટ્રિક નિષ્ફળતા અટકાવે છે અને 18,500 ગ્રાહકો માટે વીજ પુરવઠો સુનિશ્ચિત કરે છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+            elif "plan" in q_lower or "maintenance" in q_lower or "schedule" in q_lower or "આજ" in q_lower or "આજના" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="આજની ગ્રીડ-વ્યાપી જાળવણી યોજના પ્રાદેશિક ટ્રાન્સમિશન અને ડિસ્ટ્રિબ્યુશન નેટવર્કમાં 5 પ્રાથમિકતાવાળા સક્રિય કાર્યોનું શેડ્યૂલ કરે છે, જે આવનારા વાવાઝોડા પહેલાં ગ્રીડ સ્થિરતા સુનિશ્ચિત કરે છે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "પ્રાથમિકતા #1: TR-104 (ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન) - કટોકટી નિરીક્ષણ (ટીમ ક્રૂ 2 સોંપાયેલ)",
+                        "પ્રાથમિકતા #2: TR-087 (ઈસ્ટ ઇન્ડસ્ટ્રીયલ સબસ્ટેશન) - પ્રિવેન્ટિવ વાઇન્ડિંગ ડીગેસિંગ (ટીમ ક્રૂ 1 સોંપાયેલ)",
+                        "પ્રાથમિકતા #3: TR-221 (ઈસ્ટ ડિસ્ટ્રિબ્યુશન સબસ્ટેશન) - બુશિંગ લીકેજ સ્કેન (ટીમ ક્રૂ 3 તૈયારીમાં)",
+                        "પ્રાથમિકતા #4: CB-104 (ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન) - SF6 મોઇશ્ચર ચકાસણી (પેન્ડિંગ)",
+                        "પ્રાથમિકતા #5: TR-055 (સેન્ટ્રલ ગ્રીડ હબ) - રેડિયેટર ક્લીન્સિંગ અને ઓઇલ સેમ્પલિંગ (પેન્ડિંગ)"
+                    ],
+                    recommended_actions=[
+                        "ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન માટે ક્રૂ 2 ના ઈમરજન્સી ડિસ્પેચને તાત્કાલિક મંજૂરી આપો",
+                        "ઈસ્ટ ઇન્ડસ્ટ્રીયલ સબસ્ટેશન ખાતે ક્રૂ 1 સાથે આયોજિત સ્વિચિંગ વિન્ડો પૂર્ણ કરો",
+                        "બુશિંગ નિદાન માટે ઈસ્ટ ડિસ્ટ્રિબ્યુશન સબસ્ટેશન યાર્ડ ખાતે ક્રૂ 3 ને સ્ટેજ કરો",
+                        "કટોકટી ડિસ્પેચ માટે ક્રૂ 4 અને ક્રૂ 5 ને સક્રિય સ્ટેન્ડબાય પર રાખો"
+                    ],
+                    expected_impact="પ્રાથમિકતાવાળા કાર્યો પૂર્ણ કરવાથી 44,500 ગ્રાહકો માટે વીજ પુરવઠો સુરક્ષિત રહે છે અને N-1 ગ્રીડ નિયમોનું પાલન થાય છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+            elif "storm" in q_lower or "vulnerable" in q_lower or "weather" in q_lower or "વાવાઝોડું" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="પૂર્વ ઔદ્યોગિક કોરિડોર અને અડીને આવેલી ઉત્તર ટ્રાન્સમિશન લાઇન્સ આગામી 24-48 કલાક માટે સૌથી વધુ વાવાઝોડા-જોખમ સૂચકાંક ધરાવે છે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "પૂર્વ ગ્રીડ કોરિડોર: ડોપ્લર રડાર 48.5 mm/h વરસાદ અને 52 km/h પવન સાથે ભારે વાવાઝોડાની પુષ્ટિ કરે છે",
+                        "ઉત્તર ગ્રીડ કોરિડોર: 35 km/h ના ભારે પવનના ઝાપટાં 220kV લાઇન સ્થિરતાને અસર કરી રહ્યા છે",
+                        "સેન્ટ્રલ, સાઉથ અને વેસ્ટ ગ્રીડ ઝોન: સામાન્ય અને સ્થિર હવામાન પરિસ્થિતિઓ હેઠળ કાર્યરત",
+                        "સક્રિય હવામાન માર્ગ પર આવેલા સબસ્ટેશનોમાં 44,500 કુલ ગ્રાહકો જોખમમાં છે"
+                    ],
+                    recommended_actions=[
+                        "પૂર્વ ટ્રાન્સમિશન સબસ્ટેશનો પર કોડ ઓરેન્જ વાવાઝોડા સજ્જતા પ્રોટોકોલ સક્રિય કરો",
+                        "ટ્રાન્સફોર્મર બંડ્સ અને કેબલ ટ્રેન્ચમાં ઓટોમેટેડ પમ્પ કામગીરીની ચકાસણી કરો",
+                        "ઝડપી ડિસ્પેચ માટે સેન્ટ્રલ ઓપરેશન્સ હબ પર મોબાઈલ સબસ્ટેશન્સ સ્ટેજ કરો"
+                    ],
+                    expected_impact="કોરિડોર-વ્યાપી કટોકટી સજ્જતા વાવાઝોડાથી થતી લાઇન ટ્રીપિંગની ઘટનાઓમાં 68% નો ઘટાડો કરે છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+            elif "crew" in q_lower or "position" in q_lower or "staging" in q_lower or "ટીમ" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="ઝડપી કટોકટી નિવારણ માટે 5 પ્રાદેશિક ઓપરેશનલ ડેપોમાં મેન્ટેનન્સ ટીમો (ક્રૂ) વ્યૂહાત્મક રીતે તૈનાત કરવામાં આવી છે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "ક્રૂ 2 (હેવી ટ્રાન્સફોર્મર નિદાન): TR-104 માટે ઈસ્ટ ટ્રાન્સમિશન સબસ્ટેશન નજીક સ્ટેજ (ETA 7 મિનિટ)",
+                        "ક્રૂ 1 (રેપિડ રિસ્પોન્સ ટીમ અલ્ફા): TR-087 માટે ઈસ્ટ ઇન્ડસ્ટ્રીયલ સબસ્ટેશન ખાતે સોંપાયેલ (ETA 12 મિનિટ)",
+                        "ક્રૂ 3 (સબસ્ટેશન પ્રોટેક્શન સ્ક્વોડ): TR-221 માટે ઈસ્ટ ડિસ્ટ્રિબ્યુશન સબસ્ટેશન પર સ્ટેજ (ETA 15 મિનિટ)",
+                        "ક્રૂ 4 (ઓવરહેડ લાઇન પેટ્રોલ): નોર્થ રીજનલ ડેપો ખાતે સક્રિય ગશ્ત પર ઉપલબ્ધ",
+                        "ક્રૂ 5 (ઈમરજન્સી ગ્રીડ રિસ્ટોરેશન કોર્પ્સ): મોબાઈલ યુનિટ સાથે સેન્ટ્રલ હબ ડેપો પર સ્ટેન્ડબાય"
+                    ],
+                    recommended_actions=[
+                        "તમામ 5 ફિલ્ડ યુનિટ્સ વચ્ચે સુરક્ષિત ડિજિટલ રેડિયો અને SCADA લિંકની પુષ્ટિ કરો",
+                        "ઈસ્ટ સ્ટેજિંગ યાર્ડ ખાતે સ્પેસિંગ SF6 ગેસ સિલિન્ડરો અને થર્મલ કેમેરા અગાઉથી ગોઠવો",
+                        "ઉત્તર કોરિડોર લાઇન ગશ્ત ટીમો માટે સ્ટેન્ડબાય ઓવરટાઇમ મંજૂર કરો"
+                    ],
+                    expected_impact="વ્યૂહાત્મક પ્રાદેશિક સ્ટેજિંગ પ્રતિભાવ સમય (MTTR) માં 60% નો ઘટાડો કરે છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+            else:
+                # General fallback in Gujarati
+                return AdvisorQueryResponse(
+                    answer=f"પ્રાદેશિક ગ્રીડ ઓપરેશન્સ સેન્ટર ઓનલાઇન. 71/100 ના એકંદર હેલ્થ ઈન્ડેક્સ સાથે તમામ સંચાલિત હાઇ-વોલ્ટેજ સાધનો સતત SCADA ટેલિમેટ્રી સ્ટ્રીમ કરી રહ્યા છે.",
+                    priority=resp.priority,
+                    evidence=[
+                        "ગ્રીડ મોનિટરિંગ: 5 ભૌગોલિક ગ્રીડ ઝોનમાં ઉચ્ચ-વોલ્ટેજ સાધનો કાર્યરત છે",
+                        "ગ્રીડ હેલ્થ સ્કોર: 71/100 (IEEE માનક ઓપરેશનલ બેઝલાઇન: 78/100)",
+                        "જોખમ પૃથક્કરણ: 3 ગંભીર (Critical), 5 ઉચ્ચ-જોખમ (High-Risk), બાકીના સામાન્ય",
+                        "પૂર્વ કોરિડોર માં 48.5 mm/h ભારે વરસાદ સાથે વાવાઝોડાની અસર"
+                    ],
+                    recommended_actions=[
+                        "ગ્રીડ-વ્યાપી જાળવણી શેડ્યૂલની સમીક્ષા કરો અને ટીમ સ્થિતિ ચકાસો",
+                        "રિસ્ક મેપ કન્સોલ પર રીયલ-ટાઇમ સેન્સર સ્ટ્રીમ્સ જુઓ",
+                        "વાવાઝોડા પહેલા TR-104 અને TR-087 માટે પ્રાથમિકતાવાળા નિવારક પગલાં લો"
+                    ],
+                    expected_impact="ગ્રીડ-વ્યાપી દેખરેખ અને સક્રિય પગલાં IEEE ધોરણો અનુસાર સ્થિરતા જાળવી રાખે છે.",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (gujarati)"
+                )
+
+        elif language == "hi":
+            if "tr-104" in q_lower and ("fail" in q_lower or "impact" in q_lower or "happens" in q_lower):
+                return AdvisorQueryResponse(
+                    answer="ईस्ट ट्रांसमिशन सबस्टेशन पर ट्रांसफॉर्मर TR-104 की विफलता से 18,500 ग्राहकों को प्रभावित करने वाला तत्काल क्षेत्रीय बिजली आउटेज होगा।",
+                    priority=resp.priority,
+                    evidence=[
+                        "पूर्वी औद्योगिक क्षेत्र के 18,500 उपभोक्ता खातों में तत्काल बिजली कटौती",
+                        "42.0 MW औद्योगिक और नगर पालिका फीडर क्षमता का नुकसान",
+                        "क्षेत्रीय अस्पताल और जल पंपिंग स्टेशनों पर गंभीर प्रभाव",
+                        "आपातकालीन बहाली समय (बिना पूर्व-तैयारी): 4 से 7 घंटे"
+                    ],
+                    recommended_actions=[
+                        "10 किमी के भीतर थर्मल इमेजिंग वैन के साथ क्रू 2 को तैनात करें",
+                        "स्वचालित 220kV बसबार लिंक द्वारा लोड-ट्रांसफर मोड चालू करें",
+                        "महत्वपूर्ण औद्योगिक और सरकारी निकायों को स्टैंडबाय प्रोटोकॉल की जानकारी दें"
+                    ],
+                    expected_impact="पूर्व-तैयारी और स्वचालित स्विचिंग से आउटेज की संभावना 82% से घटकर 24% रह जाती है, जिससे $1.2M का नुकसान बचता है।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+            elif "tr-104" in q_lower or ("why" in q_lower and "104" in q_lower):
+                return AdvisorQueryResponse(
+                    answer="ईस्ट ट्रांसमिशन सबस्टेशन पर ट्रांसफॉर्मर TR-104 को इसके गंभीर इंसुलेशन क्षरण और उच्च ग्राहक निर्भरता के कारण उच्चतम प्राथमिकता वाला उपकरण माना जाता है।",
+                    priority=resp.priority,
+                    evidence=[
+                        "एमएल फॉल्ट मॉडल से अनुमानित विफलता संभावना: 82%",
+                        "आंशिक डिस्चार्ज गतिविधि ढांकता हुआ (dielectric) सुरक्षा सीमा से +31% अधिक",
+                        "वाइंडिंग तापमान ऐतिहासिक 7-दिवसीय मानक से 18°C अधिक है",
+                        "पूर्वी गलियारे में भीषण तूफान के सीधे रास्ते में (48.5 mm/h बारिश, 52 km/h हवा)",
+                        "18,500 ग्राहक और 42.0 MW लोड जिसमें कोई तत्काल सेकेंडरी लिंक नहीं है"
+                    ],
+                    recommended_actions=[
+                        "तत्काल थर्मल स्कैन और तेल परीक्षण के लिए आपातकालीन निदान क्रू 2 भेजें",
+                        "सेंट्रल वेयरहाउस में हाई-वोल्टेज बुशिंग असेंबली तैयार रखें",
+                        "आसपास के 220kV फीडरों पर लोड-शेडिंग और ट्रांसफर प्रोटोकॉल तैयार करें"
+                    ],
+                    expected_impact="तत्काल हस्तक्षेप गंभीर विफलता को रोकता है और 18,500 ग्राहकों के लिए बिजली आपूर्ति सुरक्षित करता है।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+            elif "plan" in q_lower or "maintenance" in q_lower or "schedule" in q_lower or "आज" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="आज की ग्रिड-व्यापी रखरखाव योजना क्षेत्रीय ट्रांसमिशन और वितरण नेटवर्क में 5 प्राथमिकता वाले कार्यों का निर्धारण करती है, जो आने वाले तूफान से पहले ग्रिड स्थिरता सुनिश्चित करती है।",
+                    priority=resp.priority,
+                    evidence=[
+                        "प्राथमिकता #1: TR-104 (ईस्ट ट्रांसमिशन सबस्टेशन) - आपातकालीन निरीक्षण (क्रू 2 आवंटित)",
+                        "प्राथमिकता #2: TR-087 (ईस्ट इंडस्ट्रियल सबस्टेशन) - वाइंडिंग डिगैसिंग (क्रू 1 आवंटित)",
+                        "प्राथमिकता #3: TR-221 (ईस्ट डिस्ट्रीब्यूशन सबस्टेशन) - बुशिंग लीक स्कैन (क्रू 3 तैयारी में)",
+                        "प्राथमिकता #4: CB-104 (ईस्ट ट्रांसमिशन सबस्टेशन) - SF6 नमी जांच (लंबित)",
+                        "प्राथमिकता #5: TR-055 (सेंट्रल ग्रिड हब) - रेडिएटर सफाई और तेल नमूना (लंबित)"
+                    ],
+                    recommended_actions=[
+                        "ईस्ट ट्रांसमिशन सबस्टेशन के लिए क्रू 2 की आपातकालीन रवानगी को तुरंत मंजूरी दें",
+                        "ईस्ट इंडस्ट्रियल सबस्टेशन पर क्रू 1 के साथ योजनाबद्ध स्विचिंग पूरी करें",
+                        "बुशिंग निदान के लिए ईस्ट डिस्ट्रीब्यूशन सबस्टेशन यार्ड पर क्रू 3 को तैनात करें",
+                        "आपातकालीन स्थिति के लिए क्रू 4 और क्रू 5 को सक्रिय स्टैंडबाय पर रखें"
+                    ],
+                    expected_impact="प्राथमिकता वाले कार्यों को पूरा करने से 44,500 ग्राहकों की बिजली सुरक्षित रहती है और IEEE मानकों का पालन होता है।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+            elif "storm" in q_lower or "vulnerable" in q_lower or "weather" in q_lower or "तूफान" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="पूर्वी औद्योगिक गलियारे और निकटवर्ती उत्तरी ट्रांसमिशन लाइनों में अगले 24-48 घंटों में तूफान का सबसे अधिक जोखिम है।",
+                    priority=resp.priority,
+                    evidence=[
+                        "पूर्वी ग्रिड गलियारा: डॉप्लर रडार 48.5 mm/h बारिश और 52 km/h हवाओं के साथ भारी तूफान की पुष्टि करता है",
+                        "उत्तरी ग्रिड गलियारा: 35 km/h की तेज हवाएं 220kV लाइन स्थिरता को प्रभावित कर रही हैं",
+                        "सेंट्रल, साउथ और वेस्ट ग्रिड ज़ोन: सामान्य और स्थिर मौसम में कार्यरत",
+                        "सक्रिय मौसम पथ पर स्थित सबस्टेशनों में 44,500 कुल ग्राहक जोखिम में हैं"
+                    ],
+                    recommended_actions=[
+                        "पूर्वी ट्रांसमिशन सबस्टेशनों पर कोड ऑरेंज तूफान तत्परता प्रोटोकॉल सक्रिय करें",
+                        "ट्रांसफॉर्मर बंड और केबल ट्रेंच में स्वचालित पंप संचालन की जांच करें",
+                        "त्वरित रवानगी के लिए सेंट्रल ऑपरेशंस हब पर मोबाइल सबस्टेशन तैनात करें"
+                    ],
+                    expected_impact="गलियारा-व्यापी आपातकालीन तत्परता तूफान से होने वाली ट्रिपिंग घटनाओं में 68% की कमी लाती है।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+            elif "crew" in q_lower or "position" in q_lower or "staging" in q_lower or "टीम" in q_lower:
+                return AdvisorQueryResponse(
+                    answer="त्वरित आपातकालीन प्रतिक्रिया के लिए 5 क्षेत्रीय परिचालन डिपो में मरम्मत टीमों (क्रू) को रणनीतिक रूप से तैनात किया गया है।",
+                    priority=resp.priority,
+                    evidence=[
+                        "क्रू 2 (भारी ट्रांसफॉर्मर निदान): TR-104 के लिए ईस्ट ट्रांसमिशन सबस्टेशन के पास तैनात (ETA 7 मिनट)",
+                        "क्रू 1 (त्वरित प्रतिक्रिया टीम अल्फा): TR-087 के लिए ईस्ट इंडस्ट्रियल सबस्टेशन पर तैनात (ETA 12 मिनट)",
+                        "क्रू 3 (सबस्टेशन सुरक्षा दस्ता): TR-221 के लिए ईस्ट डिस्ट्रीब्यूशन सबस्टेशन पर तैनात (ETA 15 मिनट)",
+                        "क्रू 4 (ओवरहेड लाइन गश्त): नॉर्थ रीजनल डिपो में सक्रिय गश्त पर उपलब्ध",
+                        "क्रू 5 (इमरजेंसी ग्रिड रिस्टोरेशन कॉर्प्स): मोबाइल यूनिट के साथ सेंट्रल हब डिपो पर स्टैंडबाय"
+                    ],
+                    recommended_actions=[
+                        "सभी 5 फील्ड यूनिटों के बीच सुरक्षित डिजिटल रेडियो और SCADA लिंक की पुष्टि करें",
+                        "ईस्ट स्टैगिंग यार्ड में अतिरिक्त SF6 गैस सिलेंडर और थर्मल कैमरे तैयार रखें",
+                        "उत्तरी गलियारे की लाइन गश्ती टीमों के लिए ओवरटाइम मंजूर करें"
+                    ],
+                    expected_impact="रणनीतिक क्षेत्रीय तैनाती प्रतिक्रिया समय (MTTR) में 60% की कमी लाती है।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+            else:
+                # General fallback in Hindi
+                return AdvisorQueryResponse(
+                    answer=f"क्षेत्रीय ग्रिड ऑपरेशंस सेंटर ऑनलाइन। 71/100 के समग्र स्वास्थ्य सूचकांक के साथ सभी निगरानी किए जा रहे उच्च-वोल्टेज उपकरण SCADA टेलीमेट्री स्ट्रीम कर रहे हैं।",
+                    priority=resp.priority,
+                    evidence=[
+                        "ग्रिड निगरानी: 5 भौगोलिक ग्रिड ज़ोन में उच्च-वोल्टेज उपकरण कार्यरत हैं",
+                        "ग्रिड स्वास्थ्य स्कोर: 71/100 (IEEE मानक परिचालन मानक: 78/100)",
+                        "जोखिम विश्लेषण: 3 गंभीर (Critical), 5 उच्च-जोखिम (High-Risk), बाकी सामान्य",
+                        "पूर्वी गलियारे में 48.5 mm/h भारी बारिश के साथ तूफान का प्रभाव"
+                    ],
+                    recommended_actions=[
+                        "ग्रिड-व्यापी रखरखाव अनुसूची की समीक्षा करें और टीम स्थिति की जांच करें",
+                        "रिस्क मैप कंसोल पर रियल-टाइम सेंसर डेटा देखें",
+                        "तूफान आने से पहले TR-104 और TR-087 के लिए प्राथमिकता वाले निवारक कदम उठाएं"
+                    ],
+                    expected_impact="ग्रिड-व्यापी निगरानी और निवारक कदम IEEE मानकों के अनुसार स्थिरता बनाए रखते हैं।",
+                    related_asset_id=resp.related_asset_id,
+                    model_name="gridguard-engine/local-rules (hindi)"
+                )
+
+        return resp
+
+    @classmethod
     def _fallback_heuristic_response(
         cls,
         db: Session,
         question: str,
-        asset_id: Optional[str] = None
+        asset_id: Optional[str] = None,
+        language: Optional[str] = "en"
     ) -> AdvisorQueryResponse:
         """
         High-reliability local heuristic engine based on real database state.
@@ -281,7 +552,7 @@ class AdvisorService:
             loc_name = crit_asset.substation if crit_asset else "East Transmission Substation"
             load_mw = crit_asset.load_mw if crit_asset else 42.0
             tr_cust = crit_asset.customers_affected if crit_asset else 18500
-            return AdvisorQueryResponse(
+            resp = AdvisorQueryResponse(
                 answer=f"An unmitigated failure of Transformer TR-104 at {loc_name} would trigger an immediate regional outage affecting {tr_cust:,} customers.",
                 priority="CRITICAL",
                 evidence=[
@@ -299,12 +570,13 @@ class AdvisorService:
                 related_asset_id="TR-104",
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 2. Why TR-104 is critical (Specific asset inquiry)
         if is_tr104_specific:
             crit_asset = next((a for a in assets if a.id == "TR-104"), None)
             loc_name = crit_asset.substation if crit_asset else "East Transmission Substation"
-            return AdvisorQueryResponse(
+            resp = AdvisorQueryResponse(
                 answer=f"Transformer TR-104 at {loc_name} is evaluated as our highest-priority critical asset due to severe insulation degradation combined with high downstream dependency.",
                 priority="CRITICAL",
                 evidence=[
@@ -323,6 +595,7 @@ class AdvisorService:
                 related_asset_id="TR-104",
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 2b. Generic asset lookup — handles ANY asset the user asks about (e.g. TR-121607)
         if queried_asset_id and queried_asset_id != "TR-104":
@@ -356,7 +629,7 @@ class AdvisorService:
                         f"Partial Discharge: {latest_sensor.partial_discharge} pC, Oil Quality: {latest_sensor.oil_quality}%"
                     )
 
-                return AdvisorQueryResponse(
+                resp = AdvisorQueryResponse(
                     answer=(
                         f"Asset {a.id} ({a.name}) is a {a.asset_type} located at {a.substation} in the {a.grid_zone}. "
                         f"Current health score is {health}/100 with a {fail_prob*100:.0f}% predicted failure probability. "
@@ -374,9 +647,10 @@ class AdvisorService:
                     related_asset_id=a.id,
                     model_name="gridguard-engine/local-rules"
                 )
+                return cls._localize_heuristic_response(resp, language, question)
             else:
                 # Asset ID was mentioned but not found in DB
-                return AdvisorQueryResponse(
+                resp = AdvisorQueryResponse(
                     answer=f"Asset {queried_asset_id} was not found in the current fleet inventory of {total_assets} monitored assets. Please verify the asset ID.",
                     priority="LOW",
                     evidence=[
@@ -392,15 +666,16 @@ class AdvisorService:
                     related_asset_id=None,
                     model_name="gridguard-engine/local-rules"
                 )
+                return cls._localize_heuristic_response(resp, language, question)
 
         # 3. Grid-Wide Maintenance Plan Inquiry (System-Level)
-        if "plan" in q_lower or "maintenance" in q_lower or "schedule" in q_lower or "today" in q_lower:
+        if "plan" in q_lower or "maintenance" in q_lower or "schedule" in q_lower or "today" in q_lower or "આજ" in q_lower or "આજના" in q_lower or "आज" in q_lower:
             actions = db.query(MaintenanceAction).order_by(MaintenanceAction.priority.asc()).all()
             ev_list = []
             for act in actions:
                 ev_list.append(f"Priority #{act.priority}: Asset {act.asset_id} -> {act.action} (Status: {act.status})")
 
-            return AdvisorQueryResponse(
+            resp = AdvisorQueryResponse(
                 answer="Today's grid-wide maintenance plan schedules 5 prioritized interventions across the regional transmission and distribution network, safeguarding reliability ahead of incoming weather fronts.",
                 priority="HIGH",
                 evidence=ev_list if ev_list else [
@@ -420,14 +695,15 @@ class AdvisorService:
                 related_asset_id=None,
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 4. Storm & Weather Vulnerability Inquiry (Corridor / Grid-Wide)
-        if "storm" in q_lower or "vulnerable" in q_lower or "weather" in q_lower or "area" in q_lower:
+        if "storm" in q_lower or "vulnerable" in q_lower or "weather" in q_lower or "area" in q_lower or "વાવાઝોડું" in q_lower or "तूफान" in q_lower:
             w_east = db.query(WeatherForecast).filter(WeatherForecast.zone == "east").first()
             rain_e = f"{w_east.rainfall_intensity_mm} mm/h" if w_east else "48.5 mm/h"
             wind_e = f"{w_east.wind_kmh} km/h" if w_east else "52.0 km/h"
 
-            return AdvisorQueryResponse(
+            resp = AdvisorQueryResponse(
                 answer="The Eastern Industrial Corridor and adjacent Northern transmission ties have the highest weather-stress vulnerability index for the next 24-48 hours.",
                 priority="HIGH",
                 evidence=[
@@ -446,10 +722,11 @@ class AdvisorService:
                 related_asset_id=None,
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 5. Field Crew Staging & Deployment (Grid-Wide)
-        if "crew" in q_lower or "position" in q_lower or "staging" in q_lower or "assign" in q_lower:
-            return AdvisorQueryResponse(
+        if "crew" in q_lower or "position" in q_lower or "staging" in q_lower or "assign" in q_lower or "ટીમ" in q_lower or "टीम" in q_lower:
+            resp = AdvisorQueryResponse(
                 answer="Field maintenance crews are strategically staged across 5 regional operational depots to ensure rapid emergency containment.",
                 priority="HIGH",
                 evidence=[
@@ -468,11 +745,12 @@ class AdvisorService:
                 related_asset_id=None,
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 6. Critical Assets requiring immediate attention (Grid-Wide Overview)
         if "immediate" in q_lower or "attention" in q_lower or "critical" in q_lower or "high risk" in q_lower:
             crit_names = [f"{a.id} ({a.substation})" for a in crit_assets]
-            return AdvisorQueryResponse(
+            resp = AdvisorQueryResponse(
                 answer=f"Across the regional fleet, 3 critical assets demand immediate operational attention, led by TR-104 and TR-087 in the Eastern grid corridor.",
                 priority="CRITICAL",
                 evidence=[
@@ -491,10 +769,11 @@ class AdvisorService:
                 related_asset_id=None,
                 model_name="gridguard-engine/local-rules"
             )
+            return cls._localize_heuristic_response(resp, language, question)
 
         # 7. General Fleet / Grid Health Overview (Default / System-Wide Fallback)
         avg_health = round(sum(a.health_score for a in assets) / total_assets) if total_assets else 71
-        return AdvisorQueryResponse(
+        resp = AdvisorQueryResponse(
             answer=f"Regional Grid Operations Center online. Fleet of {total_assets} monitored high-voltage assets actively streaming SCADA telemetry with an overall Health Index of {avg_health}/100.",
             priority="MEDIUM",
             evidence=[
@@ -513,6 +792,7 @@ class AdvisorService:
             related_asset_id=None,
             model_name="gridguard-engine/local-rules"
         )
+        return cls._localize_heuristic_response(resp, language, question)
 
     @classmethod
     def answer_query(
@@ -520,13 +800,15 @@ class AdvisorService:
         db: Session,
         question: str,
         asset_id: Optional[str] = None,
-        history: Optional[List[ChatMessagePayload]] = None
+        history: Optional[List[ChatMessagePayload]] = None,
+        language: Optional[str] = "en"
     ) -> AdvisorQueryResponse:
         """
         Primary entrypoint for answering operator queries.
         For specific asset queries, uses real-time DB lookup first for accuracy.
         For general fleet queries, calls IBM Bob AI API with live telemetry context,
         falling back gracefully to local heuristics if needed.
+        Supports language localization (English, Gujarati, Hindi).
         """
         q_lower = question.lower().strip()
 
@@ -537,16 +819,16 @@ class AdvisorService:
         # For specific asset queries, use the local DB-backed heuristic engine FIRST
         # This ensures newly added assets are always found with real data
         if queried_asset_id:
-            local_response = cls._fallback_heuristic_response(db, question, asset_id)
+            local_response = cls._fallback_heuristic_response(db, question, asset_id, language)
             if local_response:
                 return local_response
 
         # For general fleet-wide queries, attempt IBM Bob AI API real-time inference
-        response = cls._call_ibm_bob_api(db, question, asset_id, history)
+        response = cls._call_ibm_bob_api(db, question, asset_id, history, language)
         if response:
             return response
 
         # Fallback to local heuristic engine
-        return cls._fallback_heuristic_response(db, question, asset_id)
+        return cls._fallback_heuristic_response(db, question, asset_id, language)
 
 advisor_service = AdvisorService()

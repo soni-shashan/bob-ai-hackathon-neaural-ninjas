@@ -25,17 +25,36 @@ import {
 import { RiskBadge } from '../components/common/RiskBadge';
 import { askAdvisor, getDashboardSummary } from '../services/api';
 import { AdvisorQueryResponse, ChatHistoryItem } from '../types';
+import { useLanguage, Language } from '../context/LanguageContext';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-const SUGGESTED_PROMPTS = [
-  "Give me today's recommended grid maintenance plan.",
-  "What is the overall health and risk status across the entire grid?",
-  "What areas and substations are most vulnerable to the storm?",
-  "Which crews are deployed and where are they staged?",
-  "What are the top priority critical assets requiring intervention?",
-  "What is the failure impact and contingency plan for TR-104?"
-];
+const SUGGESTED_PROMPTS_MAP: Record<Language, string[]> = {
+  en: [
+    "Give me today's recommended grid maintenance plan.",
+    "What is the overall health and risk status across the entire grid?",
+    "What areas and substations are most vulnerable to the storm?",
+    "Which crews are deployed and where are they staged?",
+    "What are the top priority critical assets requiring intervention?",
+    "What is the failure impact and contingency plan for TR-104?"
+  ],
+  gu: [
+    "આજની ભલામણ કરેલ ગ્રીડ જાળવણી યોજના આપો.",
+    "સમગ્ર ગ્રીડનું એકંદર આરોગ્ય અને જોખમ સ્થિતિ શું છે?",
+    "વાવાઝોડાથી કયા વિસ્તારો અને સબસ્ટેશનો સૌથી વધુ જોખમમાં છે?",
+    "કઈ ટીમો તૈનાત છે અને તેઓ ક્યાં સ્થિત છે?",
+    "તાત્કાલિક ધ્યાન આપવા યોગ્ય સર્વોચ્ચ પ્રાથમિકતા વાળા સાધનો કયા છે?",
+    "TR-104 ના નિષ્ફળતાની અસર અને ઈમરજન્સી પ્લાન શું છે?"
+  ],
+  hi: [
+    "आज की अनुशंसित ग्रिड रखरखाव योजना बताएं।",
+    "पूरे ग्रिड का समग्र स्वास्थ्य और जोखिम स्थिति क्या है?",
+    "तूफान से कौन से क्षेत्र और सबस्टेशन सबसे अधिक संवेदनशील हैं?",
+    "कौन सी फील्ड टीमें तैनात हैं और वे कहां तैनात हैं?",
+    "तत्काल हस्तक्षेप की आवश्यकता वाले शीर्ष प्राथमिकता वाले उपकरण कौन से हैं?",
+    "TR-104 के विफल होने का प्रभाव और आपातकालीन योजना क्या है?"
+  ]
+};
 
 const HISTORY_STORAGE_KEY = 'gridguard_advisor_chat_history';
 const ACTIVE_SESSION_KEY = 'gridguard_advisor_active_session';
@@ -130,6 +149,7 @@ function formatSessionDate(isoString: string): string {
 // ── Component ────────────────────────────────────────────────────────
 
 export const AdvisorPage: React.FC = () => {
+  const { language, t } = useLanguage();
   const [inputQuestion, setInputQuestion] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [totalAssets, setTotalAssets] = useState<number>(0);
@@ -137,6 +157,8 @@ export const AdvisorPage: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>(loadSessions);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(loadActiveSessionId);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const suggestedPrompts = SUGGESTED_PROMPTS_MAP[language] || SUGGESTED_PROMPTS_MAP.en;
 
   // Fetch real fleet count from dashboard API
   useEffect(() => {
@@ -150,7 +172,11 @@ export const AdvisorPage: React.FC = () => {
     id: 'msg-0',
     sender: 'advisor',
     response: {
-      answer: 'GridGuard AI Decision-Support Advisor online, powered by IBM Bob AI. Actively analyzing real-time SCADA telemetry, multi-zone risk matrices, Doppler storm radar, and field crew logistics across the entire regional grid.',
+      answer: language === 'gu'
+        ? 'ગ્રીડગાર્ડ એઆઈ ઓપરેશનલ એડવાઈઝર ઓનલાઇન, IBM Bob AI દ્વારા સંચાલિત. રીયલ-ટાઇમ SCADA ટેલિમેટ્રી, વાવાઝોડા ટ્રેક અને ટીમ સ્થિતિનું પૃથક્કરણ કરી રહ્યું છે.'
+        : language === 'hi'
+        ? 'ग्रिडगार्ड एआई संचालन सलाहकार ऑनलाइन, IBM Bob AI द्वारा संचालित। रियल-टाइम SCADA डेटा, तूफान के रास्तों और फील्ड टीम की स्थिति का विश्लेषण कर रहा है।'
+        : 'GridGuard AI Decision-Support Advisor online, powered by IBM Bob AI. Actively analyzing real-time SCADA telemetry, multi-zone risk matrices, Doppler storm radar, and field crew logistics across the entire regional grid.',
       priority: 'HIGH',
       evidence: [
         `Fleet Telemetry: ${totalAssets || '...'} high-voltage assets monitored across East, North, Central, South, and West grid zones`,
@@ -167,7 +193,7 @@ export const AdvisorPage: React.FC = () => {
       model_name: 'ibm-bob-ai/fast'
     },
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }), [totalAssets]);
+  }), [totalAssets, language]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -321,7 +347,7 @@ export const AdvisorPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await askAdvisor(q, historyPayload);
+      const res = await askAdvisor(q, historyPayload, undefined, language);
       const advisorMsg: ChatMessage = {
         id: `adv-${Date.now()}`,
         sender: 'advisor',
@@ -506,10 +532,10 @@ export const AdvisorPage: React.FC = () => {
             </span>
           </div>
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white font-mono flex items-center gap-2.5">
-            GridGuard AI Advisor
+            {t('advisor_header_title', 'GridGuard AI Advisor')}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time conversational grid resilience & operations chatbot powered by IBM Bob AI.
+            {t('advisor_subtitle', 'Real-time conversational grid resilience & operations chatbot powered by IBM Bob AI.')}
           </p>
         </div>
 
@@ -517,16 +543,16 @@ export const AdvisorPage: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-800/60 px-3 py-1.5 rounded shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
             <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-            <span>IBM Bob AI Active</span>
+            <span>{t('ibm_bob_active', 'IBM Bob AI Active')}</span>
           </div>
 
           <button
             onClick={() => setShowHistory(true)}
-            title="View chat history"
+            title={t('chat_history', 'View chat history')}
             className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 bg-cyan-950/30 hover:bg-cyan-950/50 border border-cyan-800/50 hover:border-cyan-700/60 px-3 py-1.5 rounded transition-all shadow-sm"
           >
             <History className="w-3.5 h-3.5" />
-            <span>History</span>
+            <span>{t('history_button', 'History')}</span>
             {sessions.length > 0 && (
               <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-cyan-800/60 text-[10px] text-cyan-300 font-bold min-w-[18px] text-center">
                 {sessions.length}
@@ -536,11 +562,11 @@ export const AdvisorPage: React.FC = () => {
 
           <button
             onClick={handleReset}
-            title="Start new conversation"
+            title={t('new_chat_button', 'Start new conversation')}
             className="flex items-center gap-1.5 text-xs font-mono text-slate-400 hover:text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded transition-colors"
           >
             <Plus className="w-3.5 h-3.5 text-slate-400" />
-            <span>New Chat</span>
+            <span>{t('new_chat_button', 'New Chat')}</span>
           </button>
         </div>
       </div>
@@ -549,7 +575,7 @@ export const AdvisorPage: React.FC = () => {
       <div className="bg-[#0b1322] border border-cyan-900/40 rounded-lg px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono overflow-hidden">
         <div className="flex items-center gap-2 text-slate-300">
           <Activity className="w-4 h-4 text-cyan-400" />
-          <span className="text-cyan-300 font-semibold">Live Operational Grounding:</span>
+          <span className="text-cyan-300 font-semibold">{t('advisor_live_grounding', 'Live Operational Grounding:')}</span>
           <span className="text-slate-400">{totalAssets || '...'} HV Assets Streamed</span>
           <span className="text-slate-600">|</span>
           <span className="text-rose-400 font-medium">3 Critical & 5 High-Risk Assets</span>
@@ -566,10 +592,10 @@ export const AdvisorPage: React.FC = () => {
       <div className="bg-[#111827] border border-[#1f2d44] rounded-lg p-3.5 shadow-lg">
         <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
           <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-          Recommended Operator Diagnostic Inquiries:
+          {t('recommended_prompts', 'Recommended Operator Diagnostic Inquiries:')}
         </div>
         <div className="flex flex-wrap gap-2">
-          {SUGGESTED_PROMPTS.map((prompt, idx) => (
+          {suggestedPrompts.map((prompt, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(prompt)}
@@ -632,7 +658,7 @@ export const AdvisorPage: React.FC = () => {
                     <div className="p-3.5 rounded-lg bg-[#0d1424] border border-slate-800 space-y-2">
                       <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
                         <Terminal className="w-3.5 h-3.5 text-amber-400" />
-                        Diagnostic Evidence & Telemetry Signals:
+                        {t('diagnostic_evidence', 'Diagnostic Evidence & Telemetry Signals:')}
                       </span>
                       <ul className="space-y-1.5 text-slate-300 text-xs">
                         {m.response.evidence.map((ev, idx) => (
@@ -650,7 +676,7 @@ export const AdvisorPage: React.FC = () => {
                     <div className="p-3.5 rounded-lg bg-emerald-950/20 border border-emerald-800/60 space-y-2">
                       <span className="text-[11px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        Recommended Grid Interventions:
+                        {t('recommended_interventions', 'Recommended Grid Interventions:')}
                       </span>
                       <ol className="space-y-2 text-slate-200 text-xs list-decimal list-inside font-sans">
                         {m.response.recommended_actions.map((act, idx) => {
@@ -664,7 +690,7 @@ export const AdvisorPage: React.FC = () => {
                                   disabled={loading}
                                   className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-800 text-[11px] text-cyan-300 transition-colors"
                                 >
-                                  <span>Ask this now</span>
+                                  <span>{t('ask_this_now', 'Ask this now')}</span>
                                   <ChevronRight className="w-3 h-3 text-cyan-400" />
                                 </button>
                               )}
@@ -679,7 +705,7 @@ export const AdvisorPage: React.FC = () => {
                   {m.response.expected_impact && (
                     <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
                       <strong className="text-cyan-400 font-bold uppercase tracking-wider block mb-0.5">
-                        Outage Avoidance & Impact Estimation:
+                        {t('impact_estimation', 'Outage Avoidance & Impact Estimation:')}
                       </strong>
                       <p className="font-sans text-xs text-slate-300 leading-relaxed">
                         {m.response.expected_impact}
@@ -725,8 +751,8 @@ export const AdvisorPage: React.FC = () => {
           <div className="flex items-center gap-2.5 text-xs font-mono text-cyan-300 p-3.5 bg-[#111827] border border-cyan-900/60 rounded-xl max-w-md animate-pulse shadow-lg">
             <Bot className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
             <div className="flex flex-col">
-              <span className="font-bold text-white">IBM Bob AI Engine Reasoning...</span>
-              <span className="text-[10px] text-slate-400">Analyzing SCADA streams, weather squall tracks, and risk matrices</span>
+              <span className="font-bold text-white">{t('reasoning_engine', 'IBM Bob AI Engine Reasoning...')}</span>
+              <span className="text-[10px] text-slate-400">{t('analyzing_streams', 'Analyzing SCADA streams, weather squall tracks, and risk matrices')}</span>
             </div>
           </div>
         )}
@@ -744,7 +770,7 @@ export const AdvisorPage: React.FC = () => {
       >
         <input
           type="text"
-          placeholder="Ask about grid stability, equipment risk, weather storm tracks, or crew staging..."
+          placeholder={t('input_placeholder', 'Ask about grid stability, equipment risk, weather storm tracks, or crew staging in any language...')}
           value={inputQuestion}
           onChange={(e) => setInputQuestion(e.target.value)}
           disabled={loading}
@@ -756,7 +782,7 @@ export const AdvisorPage: React.FC = () => {
           className="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white font-mono font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md flex-shrink-0"
         >
           <Send className="w-3.5 h-3.5" />
-          <span>Ask</span>
+          <span>{t('ask_button', 'Ask')}</span>
         </button>
       </form>
     </div>

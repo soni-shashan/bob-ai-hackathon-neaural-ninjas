@@ -257,6 +257,7 @@ class AdvisorQueryRequest(BaseModel):
     question: str
     asset_id: Optional[str] = None
     history: Optional[List[ChatMessagePayload]] = None
+    language: Optional[str] = "en"
 
 class AdvisorQueryResponse(BaseModel):
     answer: str

@@ -20,6 +20,8 @@ from app.api.ml import router as ml_router
 from app.api.advisor import router as advisor_router
 from app.api.demo import router as demo_router
 from app.api.iot import router as iot_router
+from app.api.users import router as users_router
+from app.api.tickets import router as tickets_router
 
 def ensure_schema_updates(bind_engine):
     """Safely adds new columns to existing SQLite database tables if missing."""
@@ -33,7 +35,11 @@ def ensure_schema_updates(bind_engine):
             "ALTER TABLE assets ADD COLUMN equipment_risk INTEGER DEFAULT 25",
             "ALTER TABLE assets ADD COLUMN weather_risk VARCHAR(20) DEFAULT 'LOW'",
             "ALTER TABLE assets ADD COLUMN is_anomaly BOOLEAN DEFAULT 0",
-            "ALTER TABLE assets ADD COLUMN last_ml_run_at VARCHAR(30)"
+            "ALTER TABLE assets ADD COLUMN last_ml_run_at VARCHAR(30)",
+            "ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'MAIN_ADMIN'",
+            "ALTER TABLE users ADD COLUMN department VARCHAR(100) DEFAULT 'Grid Operations'",
+            "ALTER TABLE users ADD COLUMN phone VARCHAR(30)",
+            "ALTER TABLE users ADD COLUMN permissions JSON"
         ]:
             try:
                 conn.execute(text(stmt))
@@ -106,8 +112,8 @@ app.include_router(crews_router, prefix=settings.API_PREFIX, dependencies=protec
 app.include_router(ml_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(advisor_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(demo_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(users_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(tickets_router, prefix=settings.API_PREFIX, dependencies=protected)
 
-# ── IoT Routes (mixed authentication) ──────────────────────────────────
-# IoT ingest and heartbeat use X-API-Key header auth (handled by iot_auth dependency)
-# IoT device management (register/list/get/delete) uses JWT auth
 app.include_router(iot_router, prefix=settings.API_PREFIX)
+

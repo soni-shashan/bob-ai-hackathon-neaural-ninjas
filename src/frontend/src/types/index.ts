@@ -344,4 +344,106 @@ export interface IoTDeviceRegisterResponse {
   message: string;
 }
 
+// ── User Management & RBAC Types ────────────────────────────────────────
+
+export interface UserResponse {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  department?: string;
+  phone?: string;
+  permissions?: Record<string, string>;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserMinimal {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  department?: string;
+}
+
+export interface UserCreatePayload {
+  email: string;
+  password: string;
+  name: string;
+  role?: string;
+  department?: string;
+  phone?: string;
+  permissions?: Record<string, string>;
+}
+
+export interface UserUpdatePayload {
+  name?: string;
+  role?: string;
+  department?: string;
+  phone?: string;
+  is_active?: boolean;
+  permissions?: Record<string, string>;
+}
+
+// ── Maintenance Ticket System Types ─────────────────────────────────────
+
+export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'RESOLVED' | 'CLOSED';
+
+export interface TicketActivityResponse {
+  id: number;
+  ticket_id: string;
+  user_id: number;
+  user_name?: string;
+  user_email?: string;
+  action: string;
+  comment?: string;
+  timestamp: string;
+}
+
+export interface TicketResponse {
+  id: string;
+  asset_id: string;
+  asset_name?: string;
+  asset_health?: number;
+  asset_risk_score?: number;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  created_by_user_id: number;
+  created_by_name?: string;
+  assigned_to_user_id?: number;
+  assigned_to_name?: string;
+  assigned_crew_id?: string;
+  assigned_crew_name?: string;
+  created_at: string;
+  updated_at: string;
+  due_date?: string;
+  resolution_notes?: string;
+  activities: TicketActivityResponse[];
+}
+
+export interface TicketCreatePayload {
+  asset_id: string;
+  title: string;
+  description: string;
+  priority?: TicketPriority;
+  assigned_to_user_id?: number;
+  assigned_crew_id?: string;
+  due_date?: string;
+}
+
+export interface TicketUpdatePayload {
+  title?: string;
+  description?: string;
+  priority?: TicketPriority;
+  status?: TicketStatus;
+  assigned_to_user_id?: number;
+  assigned_crew_id?: string;
+  due_date?: string;
+  resolution_notes?: string;
+}
+
+
 

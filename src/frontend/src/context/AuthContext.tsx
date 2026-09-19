@@ -1,17 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-interface AuthUser {
+export interface AuthUser {
+  id: number;
   name: string;
   email: string;
+  role: string;
+  department?: string;
+  permissions?: Record<string, string>;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthUser | null;
   token: string | null;
-  login: (token: string, userName: string, userEmail: string) => void;
+  login: (
+    newToken: string,
+    userId: number,
+    userName: string,
+    userEmail: string,
+    role: string,
+    department?: string,
+    permissions?: Record<string, string>
+  ) => void;
   logout: () => void;
   isLoading: boolean;
+  isMainAdmin: () => boolean;
+  hasPermission: (section: string, level?: 'r' | 'rw') => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,13 +66,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = useCallback((newToken: string, userName: string, userEmail: string) => {
-    const userData: AuthUser = { name: userName, email: userEmail };
-    setToken(newToken);
-    setUser(userData);
-    localStorage.setItem(TOKEN_KEY, newToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(userData));
-  }, []);
+  const login = useCallback(
+    (
+      newToken: string,
+      userId: number,
+      userName: string,
+      userEmail: string,
+      role: string,
+      department?: string,
+      permissions?: Record<string, string>
+    ) => {
+      const userData: AuthUser = {
+        id: userId,
+        name: userName,
+        email: userEmail,
+        role: role || 'MAIN_ADMIN',
+        department,
+        permissions,
+      };
+      setToken(newToken);
+      setUser(userData);
+      localStorage.setItem(TOKEN_KEY, newToken);
+      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     setToken(null);
@@ -66,6 +98,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }, []);
+
+  const isMainAdmin = useCallback((): boolean => {
+    if (!user) return true;
+    return user.role === 'MAIN_ADMIN' || user.email === 'neaural.ninjas@electricity.com' || !user.role;
+  }, [user]);
+
+  const hasPermission = useCallback(
+    (section: string, level: 'r' | 'rw' = 'r'): boolean => {
+      if (!user) return true;
+      if (isMainAdmin()) return true;
+      if (!user.permissions) return true;
+      const perm = user.permissions[section] || 'rw';
+      if (perm === 'none') return false;
+      if (level === 'rw' && perm !== 'rw') return false;
+      return true;
+    },
+    [user, isMainAdmin]
+  );
 
   return (
     <AuthContext.Provider
@@ -76,6 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         isLoading,
+        isMainAdmin,
+        hasPermission,
       }}
     >
       {children}
@@ -90,3 +142,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

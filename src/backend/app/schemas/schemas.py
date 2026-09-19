@@ -399,4 +399,123 @@ class IoTLogResponse(BaseModel):
         from_attributes = True
 
 
+# ── User Management & RBAC Schemas ─────────────────────────────────────
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: Optional[str] = "GRID_OPERATOR"
+    department: Optional[str] = "Grid Operations"
+    phone: Optional[str] = None
+    permissions: Optional[Dict[str, str]] = None
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+    permissions: Optional[Dict[str, str]] = None
+
+
+class UserPasswordReset(BaseModel):
+    new_password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    name: str
+    role: str
+    department: Optional[str] = "Grid Operations"
+    phone: Optional[str] = None
+    permissions: Optional[Dict[str, str]] = None
+    is_active: bool
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserMinimal(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    department: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ── Maintenance Ticket System Schemas ──────────────────────────────────
+
+class TicketCreate(BaseModel):
+    asset_id: str
+    title: str
+    description: str
+    priority: Optional[str] = "MEDIUM" # LOW, MEDIUM, HIGH, CRITICAL
+    assigned_to_user_id: Optional[int] = None
+    assigned_crew_id: Optional[str] = None
+    due_date: Optional[str] = None
+
+
+class TicketUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None # OPEN, IN_PROGRESS, PENDING_REVIEW, RESOLVED, CLOSED
+    assigned_to_user_id: Optional[int] = None
+    assigned_crew_id: Optional[str] = None
+    due_date: Optional[str] = None
+    resolution_notes: Optional[str] = None
+
+
+class TicketCommentCreate(BaseModel):
+    comment: str
+
+
+class TicketActivityResponse(BaseModel):
+    id: int
+    ticket_id: str
+    user_id: int
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    action: str
+    comment: Optional[str] = None
+    timestamp: str
+
+    class Config:
+        from_attributes = True
+
+
+class TicketResponse(BaseModel):
+    id: str
+    asset_id: str
+    asset_name: Optional[str] = None
+    asset_health: Optional[int] = None
+    asset_risk_score: Optional[int] = None
+    title: str
+    description: str
+    priority: str
+    status: str
+    created_by_user_id: int
+    created_by_name: Optional[str] = None
+    assigned_to_user_id: Optional[int] = None
+    assigned_to_name: Optional[str] = None
+    assigned_crew_id: Optional[str] = None
+    assigned_crew_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+    due_date: Optional[str] = None
+    resolution_notes: Optional[str] = None
+    activities: List[TicketActivityResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+
 

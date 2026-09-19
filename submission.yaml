@@ -20,11 +20,13 @@ submission:
     Power transformer and substation failures cause blackouts costing utilities $1M+/hour and affecting millions of people. Most utilities still use calendar-based maintenance, while sensors already measuring temperature, vibration, partial discharge, and oil quality show failure signatures weeks in advance. Weather events compound the risk — but sensor data and weather forecasts are never combined in time to act.
 
   solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
-    GridGuard AI is a real-time predictive grid resilience and equipment failure decision-support platform. It fuses live high-voltage SCADA telemetry, IEEE C57.91 physics health scoring, Isolation Forest and ExtraTrees ML anomaly detection, and NASA POWER weather forecasts with IBM Bob AI conversational reasoning to predict equipment failures, evaluate composite outage risk, and automate prioritized maintenance schedules and crew pre-positioning.
+    GridGuard AI is a real-time predictive grid resilience and equipment failure decision-support platform. It fuses live high-voltage SCADA telemetry, IoT push device ingestion, IEEE C57.91 physics health scoring, Isolation Forest and ExtraTrees ML anomaly detection, and NASA POWER weather forecasts with IBM Bob AI conversational reasoning to predict equipment failures, evaluate composite outage risk, and automate prioritized maintenance schedules and crew pre-positioning.
 
   key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
     - "Real-time Multi-Modal SCADA Telemetry & IEEE C57.91 Physics Health Scoring"
     - "Condition-Aware Isolation Forest & ExtraTrees ML Failure Anomaly Detection Engine"
+    - "Real-Time IoT Push Telemetry Ingestion, 6-Stage ML Predictions & Zero-Dependency Python IoT SDK"
+    - "Asynchronous Background ML Evaluation Engine & Live SSE Dashboard Streaming"
     - "NASA POWER Satellite Live Weather Integration & Bounded Storm Stress Interaction Engine"
     - "Dynamic Outage Avoidance & Equipment Failure Risk Prioritization with Substation Deduplication"
     - "Real-Time AI Operations Advisor Chatbot Powered by IBM Bob AI API (Granite/fast)"
@@ -35,7 +37,7 @@ submission:
     frameworks: ["FastAPI", "React 18", "Vite", "Tailwind CSS", "Scikit-learn"]
     ibm_technologies: ["IBM Bob AI API", "IBM Granite"]
     databases: ["SQLite", "SQLAlchemy"]
-    other: ["Leaflet", "Recharts", "Pytest", "NASA POWER API", "Uvicorn","Docker"]
+    other: ["Leaflet", "Recharts", "Pytest", "NASA POWER API", "Uvicorn", "Docker", "Python IoT SDK", "SSE Streaming"]
 
   what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
     Integrating authentic high-voltage electrical grid sensor telemetry and trained scikit-learn anomaly detection models with IBM Bob AI real-time LLM reasoning to give grid dispatchers actionable failure predictions, live schematic grid topology, and automated crew dispatching before storm-induced equipment failures occur.

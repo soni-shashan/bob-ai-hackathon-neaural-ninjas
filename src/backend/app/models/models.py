@@ -11,8 +11,16 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(100), nullable=False, default="Admin")
+    role = Column(String(50), default="MAIN_ADMIN", nullable=False) # MAIN_ADMIN, GRID_OPERATOR, MAINTENANCE_ENGINEER, FIELD_TECH, VIEWER
+    department = Column(String(100), nullable=True, default="Grid Operations")
+    phone = Column(String(30), nullable=True)
+    permissions = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+
+    created_tickets = relationship("MaintenanceTicket", foreign_keys="MaintenanceTicket.created_by_user_id", back_populates="created_by")
+    assigned_tickets = relationship("MaintenanceTicket", foreign_keys="MaintenanceTicket.assigned_to_user_id", back_populates="assigned_to")
+
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -42,6 +50,7 @@ class Asset(Base):
     sensor_readings = relationship("SensorReading", back_populates="asset", cascade="all, delete-orphan")
     incidents = relationship("Incident", back_populates="asset")
     maintenance_actions = relationship("MaintenanceAction", back_populates="asset")
+    tickets = relationship("MaintenanceTicket", back_populates="asset")
 
 
 class SensorReading(Base):
@@ -110,6 +119,8 @@ class Crew(Base):
     available_from = Column(String(30), default="Immediate")
     assigned_asset_id = Column(String(50), nullable=True)
 
+    tickets = relationship("MaintenanceTicket", back_populates="crew")
+
 
 class MaintenanceAction(Base):
     __tablename__ = "maintenance_actions"
@@ -173,4 +184,45 @@ class IoTDataLog(Base):
     is_simulated = Column(Boolean, default=False)
 
     device = relationship("IoTDevice", back_populates="data_logs")
+
+
+class MaintenanceTicket(Base):
+    """Maintenance and issue fixing tickets raised for grid assets and assigned to users/crews."""
+    __tablename__ = "maintenance_tickets"
+
+    id = Column(String(50), primary_key=True, index=True) # e.g. TKT-2026-001
+    asset_id = Column(String(50), ForeignKey("assets.id"), index=True, nullable=False)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    priority = Column(String(20), default="MEDIUM") # LOW, MEDIUM, HIGH, CRITICAL
+    status = Column(String(20), default="OPEN") # OPEN, IN_PROGRESS, PENDING_REVIEW, RESOLVED, CLOSED
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_to_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assigned_crew_id = Column(String(50), ForeignKey("crews.id"), nullable=True)
+    created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+    due_date = Column(String(30), nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+
+    asset = relationship("Asset", back_populates="tickets")
+    created_by = relationship("User", foreign_keys=[created_by_user_id], back_populates="created_tickets")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_user_id], back_populates="assigned_tickets")
+    crew = relationship("Crew", back_populates="tickets")
+    activities = relationship("TicketActivity", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketActivity.id.desc()")
+
+
+class TicketActivity(Base):
+    """Audit and progress notes log for maintenance tickets."""
+    __tablename__ = "ticket_activities"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(String(50), ForeignKey("maintenance_tickets.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String(50), nullable=False) # CREATED, STATUS_CHANGE, ASSIGNMENT_CHANGE, COMMENT
+    comment = Column(Text, nullable=True)
+    timestamp = Column(String(30), default=lambda: datetime.now(timezone.utc).isoformat())
+
+    ticket = relationship("MaintenanceTicket", back_populates="activities")
+    user = relationship("User")
+
 

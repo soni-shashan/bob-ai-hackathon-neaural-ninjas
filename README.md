@@ -16,8 +16,8 @@ Furthermore, extreme weather events (such as severe thunderstorms, torrential ra
 ## 🛡️ The Solution
 
 **GridGuard AI** bridges this gap by unifying:
-1. **Asset Health Sensor Telemetry** (Temperature, Vibration, Partial Discharge, Oil Quality, Load)
-2. **ML-Based Transformer & Equipment Failure Inference** (6-stage pipeline: IEEE C57.91 Health Score → MoG Classifier → Isolation Forest Anomaly Detection → Equipment Risk → NASA POWER Weather Risk → Composite Risk)
+1. **Asset Health Sensor Telemetry & IoT Push Ingestion** (Temperature, Vibration, Partial Discharge, Oil Quality, Load via REST API & Zero-Dependency Python IoT SDK)
+2. **ML-Based Transformer & Equipment Failure Inference** (6-stage pipeline: IEEE C57.91 Health Score → MoG Classifier → Isolation Forest Anomaly Detection → Equipment Risk → NASA POWER Weather Risk → Composite Risk with Async Background Worker & SSE Live Stream)
 3. **Meteorological Risk & Synoptic Storm Radar Tracking** (Live NASA POWER satellite weather data)
 4. **Asset Criticality & Substation Topology** (26 monitored assets across 5 grid zones)
 5. **Downstream Customer & MW Load Exposure**
@@ -34,16 +34,18 @@ $$\text{\bf Prediction} \longrightarrow \text{\bf Risk Assessment} \longrightarr
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 React 18 + Vite Frontend                    │
+│             React 18 + Vite Frontend & IoT Stream           │
 │      (Dark Industrial Operations Center / Tailwind CSS)     │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ REST APIs (/api/*)
+                               │ REST APIs (/api/*) & SSE Live Stream
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     FastAPI Backend                         │
 │  ├── Composite Risk Engine (4-Weight Formula)               │
 │  ├── Maintenance Dispatch & Crew Optimizer (5 Crews)        │
 │  ├── IBM Bob AI Advisor (Fleet-Wide Reasoning Engine)       │
+│  ├── Real-Time IoT Device Ingestion Engine (/api/iot/*)     │
+│  ├── Async Background ML & Weather Worker (SSE Broadcast)   │
 │  ├── Interactive TR-104 Demo Simulator Controller           │
 │  ├── NASA POWER Weather Integration Engine                  │
 │  └── 6-Stage ML Pipeline (Health → MoG → IsoForest → Risk) │
@@ -53,7 +55,8 @@ $$\text{\bf Prediction} \longrightarrow \text{\bf Risk Assessment} \longrightarr
 ┌──────────────────────────────┐ ┌────────────────────────────┐
 │       SQLite Database        │ │   IBM Bob AI API           │
 │ (26 Assets, 2,600+ Sensors,  │ │   (Granite/fast Model)     │
-│  Incidents, Forecasts, Crews)│ │   Real-Time LLM Reasoning  │
+│  IoT Devices & Telemetry Logs│ │   Real-Time LLM Reasoning  │
+│  Incidents, Forecasts, Crews)│ │                            │
 └──────────────────────────────┘ └────────────────────────────┘
 ```
 
@@ -195,6 +198,7 @@ PYTHONPATH="." python -m pytest tests/test_api.py -v
 | `/risk-map` | Geospatial Observatory | Full-screen interactive map with Doppler storm radar overlay, substation coordinates, and slide-out asset drawer. |
 | `/maintenance` | Dispatch Planner | Prioritized action queue (5 priority levels), crew pre-positioning recommendations, skill and equipment matching, and one-click crew assignment. |
 | `/weather` | Meteorological Intel | Multi-zone grid risk table (5 zones), active Doppler alerts, and 7-day synoptic forecast from NASA POWER satellite data. |
+| `/iot` | IoT Live Stream UI | Real-time IoT push telemetry ingestion monitor, device registration, Python IoT SDK live streaming & hardware connectivity manager. |
 | `/incidents` | Reliability Archive | Historical failure log, root-cause forensics, restoration durations, and weather correlations. |
 | `/advisor` | AI Operations Advisor | IBM Bob AI-powered fleet-wide conversational reasoning engine with evidence-backed recommendations, maintenance plans, storm vulnerability analysis, and crew staging guidance. |
 | `/settings` | Engine Tuning | Composite risk weights sliders, classification thresholds, and ML model integration status. |
@@ -204,9 +208,10 @@ PYTHONPATH="." python -m pytest tests/test_api.py -v
 ## 🧪 Technology Stack
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Recharts, Leaflet, Lucide React, React Router DOM
-- **Backend:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2, HTTPX, Pytest
+- **Backend:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2, HTTPX, Pytest, SSE Streaming
+- **IoT & SDK:** Python IoT Client Library (`src/iot_sdk`), `X-API-Key` Device Authentication, Offline Buffer & Auto-Sync
 - **ML/AI:** Scikit-learn (Isolation Forest, ExtraTrees), IBM Bob AI API (Granite/fast), IEEE C57.91 Physics Model
-- **Database:** SQLite (Relational ORM with 26 pre-seeded deterministic grid assets, 2,600+ sensor readings)
+- **Database:** SQLite (Relational ORM with 26 pre-seeded deterministic grid assets, IoT devices & telemetry logs)
 - **Weather:** NASA POWER Satellite API (Live meteorological data integration)
 - **Deployment:** Docker, Nginx, Supervisord (single-container production deployment)
 
@@ -225,23 +230,26 @@ bob-ai-hackathon-neaural-ninjas/
 ├── src/
 │   ├── backend/
 │   │   ├── app/
-│   │   │   ├── api/              # REST API route handlers
-│   │   │   ├── models/           # SQLAlchemy ORM models
+│   │   │   ├── api/              # REST API route handlers (incl. /iot, /advisor, /ml)
+│   │   │   ├── models/           # SQLAlchemy ORM models (Asset, IoTDevice, IoTLog)
 │   │   │   ├── schemas/          # Pydantic request/response schemas
-│   │   │   ├── services/         # Business logic (advisor, risk, ML)
+│   │   │   ├── services/         # Business logic (advisor, risk, ML, IoT, ML background)
 │   │   │   ├── ml/               # ML pipeline & trained model artifacts
 │   │   │   ├── seed/             # Database seed data
 │   │   │   ├── config.py         # Application configuration
 │   │   │   └── main.py           # FastAPI app entry point
-│   │   ├── tests/                # 22 automated API tests
+│   │   ├── tests/                # Automated API tests
 │   │   └── requirements.txt      # Python dependencies
 │   ├── frontend/
 │   │   ├── src/
-│   │   │   ├── pages/            # 10 application pages
+│   │   │   ├── pages/            # 11 application pages (incl. IoT Live Stream)
 │   │   │   ├── components/       # Reusable UI components
 │   │   │   └── services/         # API client services
 │   │   ├── package.json          # Node.js dependencies
 │   │   └── vite.config.ts        # Vite + proxy configuration
+│   ├── iot_sdk/                  # Zero-dependency Python IoT Client Library & SDK
+│   │   ├── gridguard_iot/        # Client package
+│   │   └── README.md             # IoT SDK installation & usage guide
 │   ├── dataset.md                # Data source documentation
 │   ├── models.md                 # ML model architecture documentation
 │   └── pipeline.md               # Training & inference pipeline docs

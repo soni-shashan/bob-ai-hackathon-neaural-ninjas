@@ -153,6 +153,17 @@ export const AssetDetailPage: React.FC = () => {
           </p>
         </div>
 
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/tickets?asset_id=${asset.id}`)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-xs transition-colors shadow-lg shadow-amber-950/40 flex-shrink-0"
+          >
+            <Wrench className="w-4 h-4" />
+            <span>Raise Maintenance Ticket</span>
+          </button>
+        </div>
+
+
         {/* Live Risk Hero Card */}
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 bg-[#111827] border border-[#1f2d44] p-3 rounded-lg shadow-lg">
           <div>

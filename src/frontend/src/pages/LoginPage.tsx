@@ -46,7 +46,15 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await loginUser(email.trim(), password);
-      login(response.access_token, response.user_name, response.user_email);
+      login(
+        response.access_token,
+        response.user_id || 1,
+        response.user_name,
+        response.user_email,
+        response.role || 'MAIN_ADMIN',
+        response.department,
+        response.permissions
+      );
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       const msg = err.message || 'Login failed';

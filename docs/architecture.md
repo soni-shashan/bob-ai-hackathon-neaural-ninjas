@@ -12,31 +12,34 @@
 │   ├── Geospatial Risk Map (/risk-map)                                  │
 │   ├── Maintenance & Pre-positioning (/maintenance)                     │
 │   ├── Meteorological Intel (/weather)                                  │
+│   ├── IoT Live Stream UI (/iot)                                        │
 │   ├── Reliability Archive (/incidents)                                 │
 │   ├── Decision-Support Advisor (/advisor)                              │
 │   └── Simulator Controller (TR-104 Demo Bar)                           │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ REST APIs (/api/*) + JWT Auth
+                                    │ REST APIs (/api/*) + JWT Auth & SSE
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   Backend Application Layer (FastAPI)                   │
 │                                                                        │
 │   ├── API Routers (auth, dashboard, assets, sensors, risk, weather,    │
-│   │                incidents, maintenance, crews, ml, advisor, demo)   │
+│   │                incidents, maintenance, crews, ml, advisor, demo,   │
+│   │                iot)                                                │
 │   ├── Composite Risk Engine (Formula calculation & decomposition)      │
 │   ├── Maintenance & Dispatch Optimizer (5 Priority Tiers & Crew ETA)   │
 │   ├── IBM Bob AI Advisor Service (Granite / fast structured LLM)       │
+│   ├── IoT Push Ingestion Engine & Device Authentication Manager        │
+│   ├── Asynchronous ML Background Worker & SSE Event Broadcaster        │
 │   ├── NASA POWER Satellite Weather Integration Engine                  │
 │   └── 6-Stage ML Pipeline (Physics + Scikit-learn models)              │
-└───────────────────┬────────────────────────────────┬───────────────────┘
-                    │                                │
-                    ▼                                ▼
-       ┌────────────────────────┐       ┌────────────────────────┐
-       │     SQLite Database    │       │     IBM Bob AI API     │
-       │  (SQLAlchemy 2.0 ORM)  │       │  (Granite/fast Model)  │
-       │  26 Assets, 2,600+     │       │  Real-Time Fleet-Wide  │
-       │  Readings, 5 Crews     │       │  Reasoning Engine      │
-       └────────────────────────┘       └────────────────────────┘
+└──────┬────────────────────────────┬────────────────────────────┬───────┘
+       │                            │                            │
+       ▼                            ▼                            ▼
+┌──────────────┐          ┌──────────────────┐         ┌─────────────────┐
+│  SQLite DB   │          │  IBM Bob AI API  │         │  Python IoT SDK │
+│ (Assets, IoT │          │  (Granite/fast)  │         │ (Hardware Edge  │
+│ Logs, Crews) │          │  Reasoning Engine│         │ Device Stream)  │
+└──────────────┘          └──────────────────┘         └─────────────────┘
 ```
 
 ---
@@ -82,7 +85,19 @@ The AI Operations Advisor (`/advisor`) connects directly to the **IBM Bob AI API
 - **Dual-Mode Reasoning:** Defaults to system-wide fleet intelligence, switching to deep-dive root-cause diagnostics when a specific asset ID (e.g., `TR-104`) is detected.
 - **Failover Safety:** Includes an intelligent rule-based heuristic fallback if cloud API connectivity is interrupted.
 
-### 3. Pluggable ML Predictor Contract
+### 3. Asynchronous Background ML & Weather Worker
+To eliminate UI latency during continuous sensor ingestion and weather updates:
+- **Background Execution:** `MLBackgroundService` runs multi-stage ML re-evaluations asynchronously using FastAPI background tasks.
+- **Pre-Computed Database Persistence:** Evaluated failure probabilities, health scores, anomaly flags, and equipment risk scores are written back to the SQLite `assets` record (`last_ml_run_at`).
+- **Real-Time SSE Streaming:** Live connected web clients subscribe to Server-Sent Events (`/api/ml/stream`), automatically re-rendering dashboard KPIs and risk maps as data updates without page refreshes.
+
+### 4. IoT Device Push Ingestion & Python SDK Architecture
+For edge hardware integration (e.g., Raspberry Pi, substation gateways, SCADA RTUs):
+- **Zero-Dependency Python SDK (`src/iot_sdk`):** Lightweight client library using standard library `urllib` only. Supports single/batch reading posts, auto-collection threads, offline local sqlite buffering, and exponential backoff retry logic.
+- **Authentication:** Devices authenticate via lightweight API keys generated upon registration (`X-API-Key` HTTP header).
+- **Automated ML Scoring Pipeline:** Every ingested telemetry batch triggers immediate 6-stage ML inference, logging results to `iot_telemetry_logs` and triggering composite risk recalculations.
+
+### 5. Pluggable ML Predictor Contract
 For external model integration, the backend exposes an isolated ML prediction endpoint (`POST /api/ml/predict`):
 - **Request:**
   ```json
@@ -152,8 +167,10 @@ Host Port 3000 (or 80)
 
 ## Relational Database Schema
 
-- **`assets`**: `id`, `name`, `asset_type`, `substation`, `grid_zone`, `latitude`, `longitude`, `capacity_mva`, `load_mw`, `health_score`, `criticality_score`, `customers_affected`, `status`, `installed_date`, `last_maintenance` (26 high-voltage assets across 5 zones).
+- **`assets`**: `id`, `name`, `asset_type`, `substation`, `grid_zone`, `latitude`, `longitude`, `capacity_mva`, `load_mw`, `health_score`, `criticality_score`, `customers_affected`, `status`, `installed_date`, `last_maintenance`, `failure_probability`, `equipment_risk`, `weather_risk`, `is_anomaly`, `last_ml_run_at` (26 high-voltage assets across 5 zones).
 - **`sensor_readings`**: `id`, `asset_id`, `timestamp`, `temperature`, `vibration`, `partial_discharge`, `oil_quality`, `load`, `ambient_temperature` (2,600+ readings).
+- **`iot_devices`**: `id`, `device_name`, `api_key_hash`, `asset_id`, `device_type`, `is_active`, `is_simulated`, `created_at`, `last_heartbeat` (IoT edge hardware devices).
+- **`iot_telemetry_logs`**: `id`, `device_id`, `asset_id`, `timestamp`, `temperature`, `vibration`, `partial_discharge`, `oil_quality`, `load`, `failure_prob`, `prediction_label`, `is_anomaly` (IoT push telemetry audit log).
 - **`weather_forecasts`**: `id`, `zone`, `zone_name`, `timestamp`, `condition`, `rainfall_prob`, `rainfall_intensity_mm`, `wind_kmh`, `lightning_risk`, `flood_risk`, `weather_risk_level`, `weather_score`, `temperature_c` (NASA POWER aligned).
 - **`incidents`**: `id`, `asset_id`, `timestamp`, `failure_type`, `severity`, `duration_minutes`, `customers_affected`, `root_cause`, `weather_condition`, `resolution`, `location`.
 - **`crews`**: `id`, `name`, `status`, `depot_name`, `latitude`, `longitude`, `skills`, `equipment`, `available_from`, `assigned_asset_id` (5 specialized crews).

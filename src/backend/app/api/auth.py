@@ -64,8 +64,12 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user_id: int
     user_name: str
     user_email: str
+    role: str
+    department: str | None = None
+    permissions: dict | None = None
     expires_in: int  # seconds
 
 
@@ -129,14 +133,25 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     # Generate JWT token
     expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = _create_access_token(
-        data={"sub": user.email, "name": user.name},
+        data={
+            "sub": user.email,
+            "name": user.name,
+            "id": user.id,
+            "role": user.role or "MAIN_ADMIN",
+            "department": user.department,
+        },
         expires_delta=expires_delta,
     )
 
     return LoginResponse(
         access_token=access_token,
         token_type="bearer",
+        user_id=user.id,
         user_name=user.name,
         user_email=user.email,
+        role=user.role or "MAIN_ADMIN",
+        department=user.department,
+        permissions=user.permissions,
         expires_in=int(expires_delta.total_seconds()),
     )
+

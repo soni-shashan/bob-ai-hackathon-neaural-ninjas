@@ -12,13 +12,15 @@ Prediction → Risk Assessment → Prioritization → Maintenance Recommendation
 
 ## Key Platform Capabilities
 
-### 1. Multi-Sensor Anomaly Diagnostics
+### 1. Multi-Sensor Anomaly Diagnostics & Real-Time IoT Push Ingestion
 GridGuard AI ingests continuous time-series telemetry across 5 core high-voltage asset health dimensions:
 - **Winding & Top-Oil Temperature (°C):** Monitors thermal rise against IEEE C57.91 operational baselines.
 - **Harmonic Vibration (mm/s):** Detects core lamination clamping looseness and mechanical winding displacement.
 - **Partial Discharge (PD in pC):** High-frequency dielectric tracking identifying internal insulation micro-fissures and paper degradation.
 - **Oil Quality & Dielectric Strength (kV):** Measures breakdown voltage, moisture content, and dissolved gas breakdown.
 - **Load Utilization (% / MW):** Tracks active load draw against rated MVA transformer capacity.
+
+**Zero-Dependency Python IoT SDK (`src/iot_sdk`):** Edge hardware devices (Raspberry Pi, substation RTUs) use lightweight API keys (`X-API-Key`) to push real-time sensor streams (`POST /api/iot/ingest`). Features include background auto-collectors, local SQLite offline buffering, and exponential backoff retries.
 
 ### 2. Composite Risk Engine & 6-Stage ML Pipeline
 Rather than relying on isolated metrics, GridGuard AI executes a calibrated 6-stage machine learning and risk modeling pipeline:
@@ -34,6 +36,8 @@ $$\text{Composite Risk} = 0.40 \times \text{Equipment Risk} + 0.20 \times \text{
 The risk engine decomposes the final score into:
 - **Base Equipment Risk:** What the asset's risk is under nominal operating conditions.
 - **Weather Stress Delta:** How incoming severe rain, wind shear, and lightning amplify physical failure probability.
+
+**Asynchronous Background Worker & Live SSE Stream:** ML inference runs in non-blocking background workers (`MLBackgroundService`), persisting pre-computed scores to the SQLite DB and streaming live SSE updates (`/api/ml/stream`) to connected browser dashboards without UI latency.
 
 ### 3. Automated Maintenance Prioritization
 As real-time telemetry and weather risks fluctuate across all 26 fleet assets, the platform dynamically re-ranks maintenance actions across 5 priority tiers. Critical high-risk assets feeding sensitive downstream loads (e.g., regional trauma hospitals, municipal water pumping facilities) automatically surge to **Priority #1**.

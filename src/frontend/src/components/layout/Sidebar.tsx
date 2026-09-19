@@ -14,20 +14,23 @@ import {
   Zap,
   Activity,
   LogOut,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardSummary } from '../../services/api';
 
 const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { path: '/assets', label: 'Grid Assets', icon: Cpu },
-  { path: '/iot', label: 'IoT Live Stream', icon: Radio, badge: 'Live', badgeVariant: 'cyan' },
-  { path: '/risk-map', label: 'Risk Map', icon: MapPin },
-  { path: '/maintenance', label: 'Maintenance', icon: Wrench, badge: 'Active', badgeVariant: 'danger' },
-  { path: '/weather', label: 'Weather Intel', icon: CloudLightning, badge: 'Live', badgeVariant: 'warning' },
-  { path: '/incidents', label: 'Incidents Log', icon: History },
-  { path: '/advisor', label: 'AI Advisor', icon: Bot, badge: 'Live', badgeVariant: 'cyan' },
+  { path: '/dashboard', label: 'Overview', icon: LayoutDashboard, section: 'dashboard' },
+  { path: '/assets', label: 'Grid Assets', icon: Cpu, section: 'assets' },
+  { path: '/tickets', label: 'Tickets & Fixes', icon: Wrench, badge: 'Active', badgeVariant: 'warning', section: 'tickets' },
+  { path: '/iot', label: 'IoT Live Stream', icon: Radio, badge: 'Live', badgeVariant: 'cyan', section: 'iot' },
+  { path: '/risk-map', label: 'Risk Map', icon: MapPin, section: 'dashboard' },
+  { path: '/maintenance', label: 'Crew Planning', icon: Activity, section: 'maintenance' },
+  { path: '/weather', label: 'Weather Intel', icon: CloudLightning, badge: 'Live', badgeVariant: 'warning', section: 'weather' },
+  { path: '/incidents', label: 'Incidents Log', icon: History, section: 'incidents' },
+  { path: '/advisor', label: 'AI Advisor', icon: Bot, badge: 'Live', badgeVariant: 'cyan', section: 'advisor' },
+  { path: '/users', label: 'Users & RBAC', icon: Users, badge: 'Admin', badgeVariant: 'cyan', section: 'users' },
 ];
 
 interface SidebarProps {
@@ -36,7 +39,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission, isMainAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -72,6 +75,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     logout();
     navigate('/login', { replace: true });
   };
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => hasPermission(item.section));
 
   return (
     <>
@@ -124,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
             Operational Center
           </div>
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -161,24 +166,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             );
           })}
 
-          <div className="pt-6 px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
-            Configuration & Engine
-          </div>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
-                isActive
-                  ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`
-            }
-          >
-            <div className="flex items-center gap-3">
-              <Sliders className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-              <span>Risk Settings</span>
-            </div>
-          </NavLink>
+          {hasPermission('settings') && (
+            <>
+              <div className="pt-6 px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                Configuration & Engine
+              </div>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group ${
+                    isActive
+                      ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 font-semibold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <Sliders className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                  <span>Risk Settings</span>
+                </div>
+              </NavLink>
+            </>
+          )}
         </div>
 
         {/* System Status Panel in Footer */}
@@ -217,11 +226,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               {user?.name?.charAt(0)?.toUpperCase() || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-slate-200 leading-none truncate">
+              <p className="text-xs font-medium text-slate-200 leading-none truncate flex items-center gap-1">
                 {user?.name || 'Admin'}
               </p>
-              <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 truncate">
-                {user?.email || ''}
+              <p className="text-[10px] text-cyan-400 font-mono leading-none mt-1 truncate font-bold">
+                {user?.role?.replace('_', ' ') || 'MAIN ADMIN'}
               </p>
             </div>
             <button

@@ -108,8 +108,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuToggle }) => {
             <p className="text-xs font-medium text-slate-200 leading-none">
               {user?.name || 'Operator Console'}
             </p>
-            <p className="text-[10px] text-cyan-400/80 font-mono leading-none mt-1">
-              Grid Controller
+            <p className="text-[10px] text-cyan-400 font-mono leading-none mt-1 font-bold">
+              {user?.role?.replace('_', ' ') || 'MAIN ADMIN'}
             </p>
           </div>
         </div>

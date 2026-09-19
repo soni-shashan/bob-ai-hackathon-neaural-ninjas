@@ -2,31 +2,161 @@ import math
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from app.models.models import Asset, SensorReading, WeatherForecast, Incident, Crew, MaintenanceAction, DemoScenarioState, User
+from app.models.models import Asset, SensorReading, WeatherForecast, Incident, Crew, MaintenanceAction, DemoScenarioState, User, MaintenanceTicket, TicketActivity
 from app.services.risk_engine import risk_engine
 from app.services.dataset_feed_service import dataset_feed_service
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+DEFAULT_PERMS = {
+    "dashboard": "rw",
+    "assets": "rw",
+    "tickets": "rw",
+    "maintenance": "rw",
+    "iot": "rw",
+    "weather": "rw",
+    "incidents": "rw",
+    "advisor": "rw",
+    "users": "rw",
+    "settings": "rw",
+}
+
+def _seed_initial_tickets(db: Session):
+    """Helper to seed initial maintenance tickets."""
+    if db.query(MaintenanceTicket).first():
+        return
+    now = datetime.now(timezone.utc)
+    admin = db.query(User).filter(User.email == "neaural.ninjas@electricity.com").first()
+    eng = db.query(User).filter(User.email == "eng.sharma@electricity.com").first()
+    tech = db.query(User).filter(User.email == "tech.verma@electricity.com").first()
+
+    admin_id = admin.id if admin else 1
+    eng_id = eng.id if eng else 1
+    tech_id = tech.id if tech else 1
+
+    t1 = MaintenanceTicket(
+        id="TKT-2026-001",
+        asset_id="TR-104",
+        title="Emergency Winding Degassing & Dielectric Oil Dehydration",
+        description="ML model detected 82% failure probability with severe moisture ingress. Requires immediate oil filtering and dissolved gas analysis (DGA).",
+        priority="CRITICAL",
+        status="IN_PROGRESS",
+        created_by_user_id=admin_id,
+        assigned_to_user_id=eng_id,
+        assigned_crew_id="CREW-02",
+        created_at=(now - timedelta(hours=6)).isoformat(),
+        updated_at=(now - timedelta(hours=1)).isoformat(),
+        due_date=(now + timedelta(hours=12)).isoformat(),
+    )
+
+    t2 = MaintenanceTicket(
+        id="TKT-2026-002",
+        asset_id="TR-087",
+        title="Inspect Feeder Breaker Contacts & SF6 Pressure",
+        description="Thermal gradient running +15°C above normal baseline under peak load. Check contact resistance and SF6 gas levels.",
+        priority="HIGH",
+        status="OPEN",
+        created_by_user_id=admin_id,
+        assigned_to_user_id=tech_id,
+        assigned_crew_id="CREW-01",
+        created_at=(now - timedelta(hours=4)).isoformat(),
+        updated_at=(now - timedelta(hours=4)).isoformat(),
+        due_date=(now + timedelta(days=1)).isoformat(),
+    )
+
+    t3 = MaintenanceTicket(
+        id="TKT-2026-003",
+        asset_id="CB-104",
+        title="Substation Differential Relay Calibration & CT Scan",
+        description="Pre-storm dielectric check for main 400kV intertie breaker.",
+        priority="MEDIUM",
+        status="RESOLVED",
+        created_by_user_id=admin_id,
+        assigned_to_user_id=eng_id,
+        assigned_crew_id=None,
+        created_at=(now - timedelta(days=2)).isoformat(),
+        updated_at=(now - timedelta(hours=3)).isoformat(),
+        due_date=(now - timedelta(hours=5)).isoformat(),
+        resolution_notes="CT calibration verified within 0.2% accuracy. Relay trip matrix tested successfully.",
+    )
+
+    db.add_all([t1, t2, t3])
+    db.flush()
+
+    act1 = TicketActivity(
+        ticket_id="TKT-2026-001",
+        user_id=admin_id,
+        action="CREATED",
+        comment="Ticket raised following critical ML anomaly alert.",
+        timestamp=(now - timedelta(hours=6)).isoformat(),
+    )
+    act2 = TicketActivity(
+        ticket_id="TKT-2026-001",
+        user_id=eng_id,
+        action="STATUS_CHANGE",
+        comment="Dispatched Heavy Transformer Diagnostic Crew 2 to East Substation.",
+        timestamp=(now - timedelta(hours=1)).isoformat(),
+    )
+    db.add_all([act1, act2])
+    db.commit()
+
+
 def seed_database(db: Session, force: bool = False):
     """
-    Populates database with 26 authentic regional grid assets, 100+ live sensor readings
-    sourced directly from archive telemetry (Overview.csv, CurrentVoltage.csv) and ML model outputs
-    (weather_adjusted_risk.csv, equipment_risk_ranking.csv), 15 historical incidents, 5 crews,
-    multi-zone NASA POWER weather, and prioritized maintenance actions.
-    Uses authentic regional grid coordinates (28.6139°N, 77.2090°E) matching GridGuard_AI_Final.ipynb.
+    Populates database with users across roles, regional grid assets, sensor readings,
+    weather forecasts, crews, maintenance actions, and tickets.
     """
-    # Seed default admin user if not exists
-    existing_user = db.query(User).filter(User.email == "neaural.ninjas@electricity.com").first()
-    if not existing_user:
-        default_user = User(
-            email="neaural.ninjas@electricity.com",
-            hashed_password=pwd_context.hash("Admin@123"),
-            name="Neural Ninjas Admin",
-            is_active=True
-        )
-        db.add(default_user)
-        db.commit()
+    # Seed default multi-role users if missing
+    seed_users = [
+        {
+            "email": "neaural.ninjas@electricity.com",
+            "password": "Admin@123",
+            "name": "Neural Ninjas Main Admin",
+            "role": "MAIN_ADMIN",
+            "department": "Executive Operations",
+            "phone": "+91-9876543210",
+        },
+        {
+            "email": "operator.delhi@electricity.com",
+            "password": "Operator@123",
+            "name": "Rajesh Kumar (Grid Operator)",
+            "role": "GRID_OPERATOR",
+            "department": "Regional Operations Center",
+            "phone": "+91-9811122233",
+        },
+        {
+            "email": "eng.sharma@electricity.com",
+            "password": "Engineer@123",
+            "name": "Dr. Amit Sharma (Lead Maintenance)",
+            "role": "MAINTENANCE_ENGINEER",
+            "department": "Substation Maintenance Dept",
+            "phone": "+91-9822233344",
+        },
+        {
+            "email": "tech.verma@electricity.com",
+            "password": "Tech@123",
+            "name": "Vikram Verma (Field Tech)",
+            "role": "FIELD_TECH",
+            "department": "Rapid Field Response",
+            "phone": "+91-9833344455",
+        },
+    ]
+
+    for u_data in seed_users:
+        existing = db.query(User).filter(User.email == u_data["email"]).first()
+        if not existing:
+            u = User(
+                email=u_data["email"],
+                hashed_password=pwd_context.hash(u_data["password"]),
+                name=u_data["name"],
+                role=u_data["role"],
+                department=u_data["department"],
+                phone=u_data["phone"],
+                permissions=DEFAULT_PERMS,
+                is_active=True,
+            )
+            db.add(u)
+    db.commit()
 
     # Check if reseed is needed (forced, or legacy dummy coordinates found)
     legacy_found = db.query(Asset).filter(Asset.latitude < 25.0).first()
@@ -39,7 +169,12 @@ def seed_database(db: Session, force: bool = False):
         db.query(Asset).delete()
         db.commit()
     elif db.query(Asset).first():
+        _seed_initial_tickets(db)
         return
+
+    now = datetime.now(timezone.utc)
+
+
 
     now = datetime.now(timezone.utc)
 
@@ -939,3 +1074,80 @@ def seed_database(db: Session, force: bool = False):
         existing_state.last_updated = now.isoformat()
 
     db.commit()
+
+    # 8. Maintenance Tickets (Initial seeded tickets linked to assets and users)
+    if not db.query(MaintenanceTicket).first():
+        admin = db.query(User).filter(User.email == "neaural.ninjas@electricity.com").first()
+        eng = db.query(User).filter(User.email == "eng.sharma@electricity.com").first()
+        tech = db.query(User).filter(User.email == "tech.verma@electricity.com").first()
+
+        admin_id = admin.id if admin else 1
+        eng_id = eng.id if eng else 1
+        tech_id = tech.id if tech else 1
+
+        t1 = MaintenanceTicket(
+            id="TKT-2026-001",
+            asset_id="TR-104",
+            title="Emergency Winding Degassing & Dielectric Oil Dehydration",
+            description="ML model detected 82% failure probability with severe moisture ingress. Requires immediate oil filtering and dissolved gas analysis (DGA).",
+            priority="CRITICAL",
+            status="IN_PROGRESS",
+            created_by_user_id=admin_id,
+            assigned_to_user_id=eng_id,
+            assigned_crew_id="CREW-02",
+            created_at=(now - timedelta(hours=6)).isoformat(),
+            updated_at=(now - timedelta(hours=1)).isoformat(),
+            due_date=(now + timedelta(hours=12)).isoformat(),
+        )
+
+        t2 = MaintenanceTicket(
+            id="TKT-2026-002",
+            asset_id="TR-087",
+            title="Inspect Feeder Breaker Contacts & SF6 Pressure",
+            description="Thermal gradient running +15°C above normal baseline under peak load. Check contact resistance and SF6 gas levels.",
+            priority="HIGH",
+            status="OPEN",
+            created_by_user_id=admin_id,
+            assigned_to_user_id=tech_id,
+            assigned_crew_id="CREW-01",
+            created_at=(now - timedelta(hours=4)).isoformat(),
+            updated_at=(now - timedelta(hours=4)).isoformat(),
+            due_date=(now + timedelta(days=1)).isoformat(),
+        )
+
+        t3 = MaintenanceTicket(
+            id="TKT-2026-003",
+            asset_id="CB-104",
+            title="Substation Differential Relay Calibration & CT Scan",
+            description="Pre-storm dielectric check for main 400kV intertie breaker.",
+            priority="MEDIUM",
+            status="RESOLVED",
+            created_by_user_id=admin_id,
+            assigned_to_user_id=eng_id,
+            assigned_crew_id=None,
+            created_at=(now - timedelta(days=2)).isoformat(),
+            updated_at=(now - timedelta(hours=3)).isoformat(),
+            due_date=(now - timedelta(hours=5)).isoformat(),
+            resolution_notes="CT calibration verified within 0.2% accuracy. Relay trip matrix tested successfully.",
+        )
+
+        db.add_all([t1, t2, t3])
+        db.flush()
+
+        act1 = TicketActivity(
+            ticket_id="TKT-2026-001",
+            user_id=admin_id,
+            action="CREATED",
+            comment="Ticket raised following critical ML anomaly alert.",
+            timestamp=(now - timedelta(hours=6)).isoformat(),
+        )
+        act2 = TicketActivity(
+            ticket_id="TKT-2026-001",
+            user_id=eng_id,
+            action="STATUS_CHANGE",
+            comment="Dispatched Heavy Transformer Diagnostic Crew 2 to East Substation.",
+            timestamp=(now - timedelta(hours=1)).isoformat(),
+        )
+        db.add_all([act1, act2])
+        db.commit()
+

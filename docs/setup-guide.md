@@ -105,7 +105,23 @@ npm run dev:frontend
 
 ---
 
-### Option D: Vercel Deployment
+### Option D: Python IoT SDK & Sensor Simulation Client
+To simulate edge IoT sensors stream data live into GridGuard AI:
+
+```bash
+# Install the zero-dependency IoT SDK package
+cd src/iot_sdk
+pip install -e .
+
+# Run the interactive device simulator or example scripts
+python examples/basic_send.py
+```
+
+The telemetry stream will be ingested via `/api/iot/ingest`, trigger real-time 6-stage ML predictions, and stream live updates to the `/iot` UI dashboard page.
+
+---
+
+### Option E: Vercel Deployment
 
 The project is pre-configured for Vercel deployment using `vercel.json` multi-service architecture:
 

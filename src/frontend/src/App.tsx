@@ -12,7 +12,10 @@ import { WeatherPage } from './pages/WeatherPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { AdvisorPage } from './pages/AdvisorPage';
 import { IoTStreamPage } from './pages/IoTStreamPage';
+import { UserManagementPage } from './pages/UserManagementPage';
+import { TicketsPage } from './pages/TicketsPage';
 import { SettingsPage } from './pages/SettingsPage';
+
 
 
 /**
@@ -37,6 +40,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
 
+  return <>{children}</>;
+};
+
+const SectionProtectedRoute: React.FC<{ section: string; children: React.ReactNode }> = ({ section, children }) => {
+  const { hasPermission } = useAuth();
+  if (!hasPermission(section)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
 };
 
@@ -68,6 +79,8 @@ const AppRoutes: React.FC = () => {
         <Route path="assets/:assetId" element={<AssetDetailPage />} />
         <Route path="risk-map" element={<RiskMapPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
+        <Route path="tickets" element={<SectionProtectedRoute section="tickets"><TicketsPage /></SectionProtectedRoute>} />
+        <Route path="users" element={<SectionProtectedRoute section="users"><UserManagementPage /></SectionProtectedRoute>} />
         <Route path="weather" element={<WeatherPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
         <Route path="advisor" element={<AdvisorPage />} />
@@ -79,6 +92,7 @@ const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
+
 
 export const App: React.FC = () => {
   return (

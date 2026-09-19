@@ -22,8 +22,16 @@ import {
   IoTDeviceStatus,
   IoTLog,
   IoTDeviceRegisterRequest,
-  IoTDeviceRegisterResponse
+  IoTDeviceRegisterResponse,
+  UserResponse,
+  UserMinimal,
+  UserCreatePayload,
+  UserUpdatePayload,
+  TicketResponse,
+  TicketCreatePayload,
+  TicketUpdatePayload,
 } from '../types';
+
 
 
 // Base API configuration: In production (Vercel) and local dev, requests use relative /api/* paths.
@@ -107,8 +115,12 @@ export const checkHealth = (): Promise<HealthStatusResponse> =>
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+  user_id: number;
   user_name: string;
   user_email: string;
+  role: string;
+  department?: string;
+  permissions?: Record<string, string>;
   expires_in: number;
 }
 
@@ -356,6 +368,88 @@ export const resetIoTSystem = (): Promise<{ success: boolean; deleted_devices: n
   fetchJson('/api/iot/reset', {
     method: 'POST'
   });
+
+// ── User Management API Calls ──────────────────────────────────────────────
+
+export const getUsers = (search?: string, role?: string): Promise<UserResponse[]> => {
+  const searchParams = new URLSearchParams();
+  if (search) searchParams.set('search', search);
+  if (role) searchParams.set('role', role);
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchJson<UserResponse[]>(`/api/users${query}`);
+};
+
+export const getAssignableUsers = (): Promise<UserMinimal[]> =>
+  fetchJson<UserMinimal[]>('/api/users/assignable');
+
+export const createUser = (payload: UserCreatePayload): Promise<UserResponse> =>
+  fetchJson<UserResponse>('/api/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateUser = (userId: number, payload: UserUpdatePayload): Promise<UserResponse> =>
+  fetchJson<UserResponse>(`/api/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const resetUserPassword = (userId: number, newPassword: string): Promise<{ message: string }> =>
+  fetchJson<{ message: string }>(`/api/users/${userId}/reset-password`, {
+    method: 'PUT',
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+
+export const deleteUser = (userId: number): Promise<{ message: string }> =>
+  fetchJson<{ message: string }>(`/api/users/${userId}`, {
+    method: 'DELETE',
+  });
+
+// ── Maintenance Tickets API Calls ──────────────────────────────────────────
+
+export const getTickets = (params?: {
+  asset_id?: string;
+  status?: string;
+  priority?: string;
+  assigned_to_user_id?: number;
+  search?: string;
+}): Promise<TicketResponse[]> => {
+  const searchParams = new URLSearchParams();
+  if (params?.asset_id) searchParams.set('asset_id', params.asset_id);
+  if (params?.status) searchParams.set('status', params.status);
+  if (params?.priority) searchParams.set('priority', params.priority);
+  if (params?.assigned_to_user_id) searchParams.set('assigned_to_user_id', params.assigned_to_user_id.toString());
+  if (params?.search) searchParams.set('search', params.search);
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchJson<TicketResponse[]>(`/api/tickets${query}`);
+};
+
+export const createTicket = (payload: TicketCreatePayload): Promise<TicketResponse> =>
+  fetchJson<TicketResponse>('/api/tickets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const getTicketById = (ticketId: string): Promise<TicketResponse> =>
+  fetchJson<TicketResponse>(`/api/tickets/${encodeURIComponent(ticketId)}`);
+
+export const updateTicket = (ticketId: string, payload: TicketUpdatePayload): Promise<TicketResponse> =>
+  fetchJson<TicketResponse>(`/api/tickets/${encodeURIComponent(ticketId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const addTicketComment = (ticketId: string, comment: string): Promise<TicketResponse> =>
+  fetchJson<TicketResponse>(`/api/tickets/${encodeURIComponent(ticketId)}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  });
+
+export const deleteTicket = (ticketId: string): Promise<{ message: string }> =>
+  fetchJson<{ message: string }>(`/api/tickets/${encodeURIComponent(ticketId)}`, {
+    method: 'DELETE',
+  });
+
 
 
 

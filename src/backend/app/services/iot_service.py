@@ -215,6 +215,18 @@ class IoTService:
 
         db.commit()
 
+        # Trigger background ML re-evaluation & live dashboard push update
+        try:
+            from app.services.ml_background_service import ml_background_service
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ml_background_service.run_background_reevaluation(asset_id=asset_id))
+            except RuntimeError:
+                pass
+        except Exception as e:
+            logger.warning(f"IoT ingest background ML trigger warning: {e}")
+
         return IoTBatchIngestResponse(
             success=True,
             device_id=device.id,

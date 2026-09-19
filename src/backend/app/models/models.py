@@ -32,6 +32,12 @@ class Asset(Base):
     status = Column(String(20), default="OPERATIONAL") # OPERATIONAL, WARNING, CRITICAL, MAINTENANCE
     installed_date = Column(String(20), default="2018-04-15")
     last_maintenance = Column(String(20), default="2026-03-10")
+    risk_score = Column(Integer, default=25)
+    failure_probability = Column(Float, default=0.15)
+    equipment_risk = Column(Integer, default=25)
+    weather_risk = Column(String(20), default="LOW")
+    is_anomaly = Column(Boolean, default=False)
+    last_ml_run_at = Column(String(30), nullable=True)
 
     sensor_readings = relationship("SensorReading", back_populates="asset", cascade="all, delete-orphan")
     incidents = relationship("Incident", back_populates="asset")

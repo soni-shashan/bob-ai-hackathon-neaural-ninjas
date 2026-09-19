@@ -267,6 +267,36 @@ export const predictFailure = (req: MLPredictRequest): Promise<MLPredictResponse
 export const getMLModelInfo = (): Promise<MLModelInfo> =>
   fetchJson<MLModelInfo>('/api/ml/info');
 
+export const triggerRecalculateML = (): Promise<{ message: string; status: string }> =>
+  fetchJson<{ message: string; status: string }>('/api/assets/recalculate-ml', {
+    method: 'POST'
+  });
+
+export const subscribeToDashboardStream = (onUpdate: (data: any) => void): (() => void) => {
+  const token = localStorage.getItem('gridguard_token');
+  const streamUrl = resolveUrl('/api/dashboard/stream');
+  
+  // Create EventSource (if token required, standard EventSource or polling stream fallback)
+  const eventSource = new EventSource(streamUrl);
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onUpdate(data);
+    } catch (e) {
+      console.warn('Error parsing SSE event:', e);
+    }
+  };
+
+  eventSource.onerror = (err) => {
+    console.debug('SSE stream connection issue, reconnecting...', err);
+  };
+
+  return () => {
+    eventSource.close();
+  };
+};
+
 // 9. AI Advisor
 export const askAdvisor = (
   question: string,

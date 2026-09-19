@@ -12,6 +12,11 @@ Hardware:
 NOTE: This example requires RPi.GPIO and smbus2 libraries.
       Install: pip install RPi.GPIO smbus2 adafruit-circuitpython-ads1x15
 """
+import os
+import sys
+
+# Ensure gridguard_iot package is loadable without pip install
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gridguard_iot import GridGuardIoTClient, SensorReading
 
 # ── Configuration ──────────────────────────────────────────────────────

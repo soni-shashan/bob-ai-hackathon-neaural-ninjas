@@ -3,14 +3,19 @@
 GridGuard IoT SDK — Auto-Collector Example
 Demonstrates automatic sensor polling and batch data push with offline buffering.
 """
+import os
+import sys
 import random
 import time
 import logging
+
+# Ensure gridguard_iot package is loadable without pip install
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gridguard_iot import GridGuardIoTClient, SensorReading
 
 # ── Configuration ──────────────────────────────────────────────────────
 SERVER_URL = "http://localhost:8000"
-API_KEY = "gg_iot_your_api_key_here"  # Replace with your actual API key
+API_KEY = "gg_iot_WVb8oSKuY9GE5BtJyuI-36KZRs83DFot2TL0Ky8Jo7kZbiAK"  # Replace with your actual API key
 
 # Enable logging to see collector activity
 logging.basicConfig(

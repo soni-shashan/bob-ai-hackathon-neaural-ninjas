@@ -3,6 +3,11 @@
 GridGuard IoT SDK — Basic Usage Example
 Demonstrates sending a single sensor reading and interpreting the response.
 """
+import os
+import sys
+
+# Ensure gridguard_iot package is loadable without pip install
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gridguard_iot import GridGuardIoTClient, SensorReading
 
 # ── Configuration ──────────────────────────────────────────────────────

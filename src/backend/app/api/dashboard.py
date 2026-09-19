@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import List
@@ -6,9 +7,23 @@ from app.database.session import get_db
 from app.schemas.schemas import DashboardSummaryResponse, RiskTrendPoint, AlertNotification, RiskDistribution, RiskTierStat
 from app.models.models import Asset, DemoScenarioState
 from app.services.dataset_feed_service import dataset_feed_service
+from app.services.ml_background_service import ml_background_service
 from app.api.assets import _hydrate_asset
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+@router.get("/stream")
+async def stream_dashboard_events():
+    """SSE endpoint for live real-time push notifications when background ML runs complete."""
+    return StreamingResponse(
+        ml_background_service.subscribe(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
 def get_dashboard_summary(db: Session = Depends(get_db)):

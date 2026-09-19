@@ -21,7 +21,7 @@ import {
   Layers
 } from 'lucide-react';
 import { RiskBadge } from '../components/common/RiskBadge';
-import { getAssets, getWeather } from '../services/api';
+import { getAssets, getWeather, subscribeToDashboardStream } from '../services/api';
 import { AssetSummary, WeatherCondition } from '../types';
 import { MapContainer, TileLayer, Marker, CircleMarker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -405,6 +405,13 @@ export const RiskMapPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    const unsubscribe = subscribeToDashboardStream((eventData) => {
+      console.log('⚡ Risk Map live background update:', eventData);
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, [context?.refreshTrigger]);
 
   const filteredAssets = assets.filter((a) => {

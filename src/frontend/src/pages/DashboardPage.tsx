@@ -31,7 +31,9 @@ import {
   getDashboardSummary,
   getAssets,
   getRiskTrend,
-  getActiveAlerts
+  getActiveAlerts,
+  subscribeToDashboardStream,
+  triggerRecalculateML
 } from '../services/api';
 import {
   DashboardSummary,
@@ -51,10 +53,12 @@ export const DashboardPage: React.FC = () => {
   const [alerts, setAlerts] = useState<AlertNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastMLRunTime, setLastMLRunTime] = useState<string>(new Date().toLocaleTimeString());
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       setError(null);
 
       const [sumRes, topAssetRes, allAssetRes, trendRes, alertRes] = await Promise.all([
@@ -70,24 +74,46 @@ export const DashboardPage: React.FC = () => {
       setAllAssets(allAssetRes.items);
       setTrendData(trendRes);
       setAlerts(alertRes);
+      setLastMLRunTime(new Date().toLocaleTimeString());
     } catch (err: any) {
       console.error('Error loading dashboard:', err);
-      setError(err.message || 'Failed to connect to GridGuard backend.');
+      if (!isBackground) setError(err.message || 'Failed to connect to GridGuard backend.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+
+    // Subscribe to real-time background ML updates via SSE
+    const unsubscribe = subscribeToDashboardStream((eventData) => {
+      console.log('⚡ Live Dashboard Stream event received:', eventData);
+      loadData(true);
+    });
+
+    return () => unsubscribe();
   }, [context?.refreshTrigger]);
 
+  const handleManualMLTrigger = async () => {
+    try {
+      setIsRecalculating(true);
+      await triggerRecalculateML();
+      setTimeout(() => {
+        loadData(true);
+        setIsRecalculating(false);
+      }, 1200);
+    } catch (e) {
+      setIsRecalculating(false);
+    }
+  };
+
   if (loading && !summary) {
-    return <LoadingSpinner message="Connecting to Regional Grid SCADA & ML Predictor..." />;
+    return <LoadingSpinner message="Connecting to Regional Grid SCADA & Pre-computed ML Engine..." />;
   }
 
   if (error && !summary) {
-    return <ErrorMessage message={error} onRetry={loadData} />;
+    return <ErrorMessage message={error} onRetry={() => loadData()} />;
   }
 
   // Compute exact distribution numbers and percentages
@@ -106,6 +132,27 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Background ML Engine Live Banner */}
+      <div className="flex items-center justify-between bg-slate-900/80 border border-cyan-500/30 px-4 py-2 rounded-lg text-xs font-mono">
+        <div className="flex items-center gap-2 text-cyan-300 font-medium">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+          </span>
+          <span>Background ML Worker: Active</span>
+          <span className="text-slate-500">•</span>
+          <span className="text-slate-400">Pre-computed Predictions Sync: {lastMLRunTime}</span>
+        </div>
+        <button
+          onClick={handleManualMLTrigger}
+          disabled={isRecalculating}
+          className="flex items-center gap-1.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/50 px-2.5 py-1 rounded text-[11px] font-semibold transition disabled:opacity-50"
+        >
+          <Cpu className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+          <span>{isRecalculating ? 'Processing ML...' : 'Run ML Pass'}</span>
+        </button>
+      </div>
+
       {/* Page Title & Operational Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
         <div>
@@ -117,7 +164,7 @@ export const DashboardPage: React.FC = () => {
             Regional Power Grid Overview & Analytics
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time telemetry, predictive failure analytics, and weather-stress correlations.
+            Real-time telemetry, background predictive failure analytics, and weather-stress correlations.
           </p>
         </div>
 

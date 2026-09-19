@@ -25,26 +25,37 @@ def ensure_schema_updates(bind_engine):
     """Safely adds new columns to existing SQLite database tables if missing."""
     from sqlalchemy import text
     with bind_engine.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE iot_devices ADD COLUMN is_simulated BOOLEAN DEFAULT 0"))
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE iot_data_logs ADD COLUMN is_simulated BOOLEAN DEFAULT 0"))
-            conn.commit()
-        except Exception:
-            pass
+        for stmt in [
+            "ALTER TABLE iot_devices ADD COLUMN is_simulated BOOLEAN DEFAULT 0",
+            "ALTER TABLE iot_data_logs ADD COLUMN is_simulated BOOLEAN DEFAULT 0",
+            "ALTER TABLE assets ADD COLUMN risk_score INTEGER DEFAULT 25",
+            "ALTER TABLE assets ADD COLUMN failure_probability FLOAT DEFAULT 0.15",
+            "ALTER TABLE assets ADD COLUMN equipment_risk INTEGER DEFAULT 25",
+            "ALTER TABLE assets ADD COLUMN weather_risk VARCHAR(20) DEFAULT 'LOW'",
+            "ALTER TABLE assets ADD COLUMN is_anomaly BOOLEAN DEFAULT 0",
+            "ALTER TABLE assets ADD COLUMN last_ml_run_at VARCHAR(30)"
+        ]:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                pass
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create tables and seed data
+    # Startup: Create tables, seed data, and run initial background ML pass
     Base.metadata.create_all(bind=engine)
     ensure_schema_updates(engine)
     db = SessionLocal()
     try:
         seed_database(db)
+        # Initial background ML evaluation pass
+        from app.services.ml_background_service import ml_background_service
+        ml_background_service.evaluate_all_assets_ml(db)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Startup ML evaluation warning: {e}")
     finally:
         db.close()
     yield

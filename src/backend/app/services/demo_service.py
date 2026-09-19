@@ -105,6 +105,21 @@ class DemoService:
                     action.status = "ASSIGNED"
 
         db.commit()
+
+        # Trigger background ML re-evaluation pass across assets
+        try:
+            from app.services.ml_background_service import ml_background_service
+            ml_background_service.evaluate_all_assets_ml(db, stage=stage)
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ml_background_service.notify_update(event_type="stage_changed"))
+            except RuntimeError:
+                pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Demo stage ML re-evaluation warning: {e}")
+
         return cls.get_state(db)
 
 demo_service = DemoService()

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getCurrentUserProfile } from '../services/api';
 
 export interface AuthUser {
   id: number;
@@ -26,6 +27,7 @@ export interface AuthContextType {
   isLoading: boolean;
   isMainAdmin: () => boolean;
   hasPermission: (section: string, level?: 'r' | 'rw') => boolean;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +40,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }, []);
+
   // Restore session from localStorage on mount
   useEffect(() => {
     try {
@@ -45,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedUser = localStorage.getItem(USER_KEY);
 
       if (savedToken && savedUser) {
-        // Basic JWT expiry check (decode payload without verification)
+        // Basic JWT expiry check
         const payload = JSON.parse(atob(savedToken.split('.')[1]));
         const now = Math.floor(Date.now() / 1000);
 
@@ -53,18 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
         } else {
-          // Token expired — clear storage
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
+          logout();
         }
       }
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      logout();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   const login = useCallback(
     (
@@ -92,12 +98,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     []
   );
 
-  const logout = useCallback(() => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  }, []);
+  // Live profile refresh from backend
+  const refreshUserProfile = useCallback(async () => {
+    const currentToken = localStorage.getItem(TOKEN_KEY);
+    if (!currentToken) return;
+
+    try {
+      const freshUser = await getCurrentUserProfile();
+      if (freshUser) {
+        const updatedUserData: AuthUser = {
+          id: freshUser.id,
+          name: freshUser.name,
+          email: freshUser.email,
+          role: freshUser.role,
+          department: freshUser.department,
+          permissions: freshUser.permissions,
+        };
+
+        setUser(updatedUserData);
+        localStorage.setItem(USER_KEY, JSON.stringify(updatedUserData));
+      }
+    } catch (err: any) {
+      // If user account is deactivated (403) or token invalid (401), force logout
+      if (
+        err?.message?.includes('403') ||
+        err?.message?.includes('401') ||
+        err?.message?.toLowerCase().includes('deactivated')
+      ) {
+        logout();
+      }
+    }
+  }, [logout]);
+
+  // Periodic polling (every 5 seconds) & focus listener for real-time live permission updates
+  useEffect(() => {
+    if (!token) return;
+
+    // Initial check right after mount/login
+    refreshUserProfile();
+
+    const interval = setInterval(() => {
+      refreshUserProfile();
+    }, 5000);
+
+    const handleFocus = () => {
+      refreshUserProfile();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [token, refreshUserProfile]);
 
   const isMainAdmin = useCallback((): boolean => {
     if (!user) return true;
@@ -128,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isMainAdmin,
         hasPermission,
+        refreshUserProfile,
       }}
     >
       {children}
@@ -142,4 +197,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-

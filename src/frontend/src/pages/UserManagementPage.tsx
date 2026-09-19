@@ -66,7 +66,7 @@ const DEFAULT_PERMISSIONS: Record<string, string> = {
 };
 
 export const UserManagementPage: React.FC = () => {
-  const { user: currentUser, isMainAdmin } = useAuth();
+  const { user: currentUser, isMainAdmin, refreshUserProfile } = useAuth();
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -85,6 +85,7 @@ export const UserManagementPage: React.FC = () => {
       await deleteUser(u.id);
       setStatusMessage({ type: 'success', text: `User ${u.email} account deactivated successfully.` });
       fetchUsersList();
+      refreshUserProfile();
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err.message || 'Failed to deactivate user.' });
     }
@@ -177,6 +178,7 @@ export const UserManagementPage: React.FC = () => {
       setStatusMessage({ type: 'success', text: `User ${editingUser.name} updated successfully!` });
       setEditingUser(null);
       fetchUsersList();
+      refreshUserProfile();
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err.message || 'Failed to update user.' });
     }
@@ -204,6 +206,7 @@ export const UserManagementPage: React.FC = () => {
         text: `User ${u.name} account ${!u.is_active ? 'activated' : 'deactivated'}.`,
       });
       fetchUsersList();
+      refreshUserProfile();
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err.message || 'Failed to change status.' });
     }

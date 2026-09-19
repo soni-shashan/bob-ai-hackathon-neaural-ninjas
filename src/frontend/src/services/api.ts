@@ -379,6 +379,9 @@ export const getUsers = (search?: string, role?: string): Promise<UserResponse[]
   return fetchJson<UserResponse[]>(`/api/users${query}`);
 };
 
+export const getCurrentUserProfile = (): Promise<UserResponse> =>
+  fetchJson<UserResponse>('/api/users/me');
+
 export const getAssignableUsers = (): Promise<UserMinimal[]> =>
   fetchJson<UserMinimal[]>('/api/users/assignable');
 

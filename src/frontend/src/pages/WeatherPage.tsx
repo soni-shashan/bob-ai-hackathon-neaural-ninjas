@@ -120,24 +120,13 @@ const CountdownBar: React.FC<{ secondsLeft: number; totalSeconds: number }> = ({
   );
 };
 
-// ── Live Pulse Dot ─────────────────────────────────────────────────────
-const LivePulseDot: React.FC<{ color?: string }> = ({ color = 'emerald' }) => (
-  <span className="relative flex h-2 w-2">
-    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${color}-400 opacity-75`}></span>
-    <span className={`relative inline-flex rounded-full h-2 w-2 bg-${color}-400`}></span>
-  </span>
-);
-
 // ── Auto-refresh interval config ───────────────────────────────────────
 const MAJOR_REFRESH_MIN_SEC = 120; // 2 minutes
 const MAJOR_REFRESH_MAX_SEC = 180; // 3 minutes
-const MICRO_TICK_MIN_SEC = 15;     // micro-drift every 15s
-const MICRO_TICK_MAX_SEC = 15;
+const MICRO_TICK_SEC = 15;         // micro-drift every 15s
 
 const getRandomMajorInterval = () =>
   Math.floor(MAJOR_REFRESH_MIN_SEC + Math.random() * (MAJOR_REFRESH_MAX_SEC - MAJOR_REFRESH_MIN_SEC));
-const getRandomMicroInterval = () =>
-  Math.floor(MICRO_TICK_MIN_SEC + Math.random() * (MICRO_TICK_MAX_SEC - MICRO_TICK_MIN_SEC));
 
 // ── Realistic drift helpers ────────────────────────────────────────────
 const drift = (base: number, range: number, min?: number, max?: number) => {
@@ -258,7 +247,7 @@ export const WeatherPage: React.FC = () => {
     }
   };
 
-  // ── Background micro-tick simulation (every 15-30s) ─────────────────
+  // ── Background micro-tick simulation (every 15s) ────────────────────
   // Silently drifts data in the background — no loading states, no spinners
   const scheduleMicroTick = useCallback(() => {
     if (microTimerRef.current) clearTimeout(microTimerRef.current);
@@ -285,10 +274,10 @@ export const WeatherPage: React.FC = () => {
       setLastUpdated(new Date());
 
       // Schedule next micro-tick
-      microTimerRef.current = setTimeout(tick, getRandomMicroInterval() * 1000);
+      microTimerRef.current = setTimeout(tick, MICRO_TICK_SEC * 1000);
     };
 
-    microTimerRef.current = setTimeout(tick, getRandomMicroInterval() * 1000);
+    microTimerRef.current = setTimeout(tick, MICRO_TICK_SEC * 1000);
   }, []);
 
   // ── Initial fetch on mount ──────────────────────────────────────────
@@ -308,29 +297,28 @@ export const WeatherPage: React.FC = () => {
     return () => {
       if (microTimerRef.current) clearTimeout(microTimerRef.current);
     };
-  }, [nasaData !== null && zones.length > 0]); // only trigger once when data first arrives
+  }, [nasaData !== null && zones.length > 0]);
 
   // ── Major refresh countdown (every 2-3 min) with flash effect ───────
   useEffect(() => {
     countdownRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          // Major refresh: bigger drift + flash effect
           const nextCycle = getRandomMajorInterval();
           setTotalCycle(nextCycle);
           setRefreshCount((c) => c + 1);
 
           // Apply a larger drift for major refresh
           if (nasaRef.current) {
-            const prev = nasaRef.current;
+            const prevData = nasaRef.current;
             const drifted = driftNasaData({
-              ...prev,
-              temperature_c: drift(prev.temperature_c, 1.5, 15, 48),
-              humidity_pct: drift(prev.humidity_pct, 4, 30, 99),
-              wind_speed_ms: drift(prev.wind_speed_ms, 1.2, 0.2, 25),
-              precipitation_mm: drift(prev.precipitation_mm, 1.5, 0, 60),
+              ...prevData,
+              temperature_c: drift(prevData.temperature_c, 1.5, 15, 48),
+              humidity_pct: drift(prevData.humidity_pct, 4, 30, 99),
+              wind_speed_ms: drift(prevData.wind_speed_ms, 1.2, 0.2, 25),
+              precipitation_mm: drift(prevData.precipitation_mm, 1.5, 0, 60),
             });
-            setPrevNasaData(prev);
+            setPrevNasaData(prevData);
             setNasaData(drifted);
             nasaRef.current = drifted;
           }
@@ -345,13 +333,12 @@ export const WeatherPage: React.FC = () => {
           setDataFlash(true);
           setTimeout(() => setDataFlash(false), 2500);
 
-          // Also try a real API refresh in the background (silent, no error shown)
+          // Also try a real API refresh in the background (silent)
           Promise.all([
             getWeather().catch(() => null),
             getWeatherAlerts().catch(() => null),
           ]).then(([newZones, newAlerts]) => {
             if (newAlerts) setAlerts(newAlerts);
-            // We don't overwrite zones from API — we keep our drifted values for continuity
           });
 
           return nextCycle;
@@ -397,7 +384,6 @@ export const WeatherPage: React.FC = () => {
   const prevPrecip = prevNasaData?.precipitation_mm ?? precip;
   const prevPressure = prevNasaData?.surface_pressure_kpa ?? pressure;
   const prevDewpoint = prevNasaData?.dew_point_c ?? dewpoint;
-
 
   return (
     <div className="space-y-4 sm:space-y-6">

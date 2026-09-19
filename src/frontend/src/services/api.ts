@@ -450,6 +450,67 @@ export const deleteTicket = (ticketId: string): Promise<{ message: string }> =>
     method: 'DELETE',
   });
 
+// 12. Bulk Upload — CSV Template & Batch Asset Registration
+export interface BulkUploadError {
+  row: number;
+  id: string;
+  errors: string[];
+}
 
+export interface BulkUploadResponse {
+  total_rows: number;
+  created: number;
+  skipped: number;
+  errors: BulkUploadError[];
+  message: string;
+}
 
+export const downloadBulkTemplate = async (): Promise<void> => {
+  const url = resolveUrl('/api/bulk/template');
+  const res = await fetch(url, {
+    headers: { ...getAuthHeaders() }
+  });
+  if (!res.ok) {
+    throw new Error('Failed to download template');
+  }
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gridguard_bulk_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+};
 
+export const uploadBulkCSV = async (file: File): Promise<BulkUploadResponse> => {
+  const url = resolveUrl('/api/bulk/upload');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...getAuthHeaders() },
+    body: formData
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('gridguard_user');
+    if (!window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
+    throw new Error('Authentication expired. Please login again.');
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let detail = errText;
+    try {
+      const parsed = JSON.parse(errText);
+      detail = parsed.detail || errText;
+    } catch {}
+    throw new Error(detail);
+  }
+
+  return await res.json();
+};

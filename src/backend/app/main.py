@@ -22,6 +22,7 @@ from app.api.demo import router as demo_router
 from app.api.iot import router as iot_router
 from app.api.users import router as users_router
 from app.api.tickets import router as tickets_router
+from app.api.bulk_upload import router as bulk_upload_router
 
 def ensure_schema_updates(bind_engine):
     """Safely adds new columns to existing SQLite database tables if missing."""
@@ -114,6 +115,7 @@ app.include_router(advisor_router, prefix=settings.API_PREFIX, dependencies=prot
 app.include_router(demo_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(users_router, prefix=settings.API_PREFIX, dependencies=protected)
 app.include_router(tickets_router, prefix=settings.API_PREFIX, dependencies=protected)
+app.include_router(bulk_upload_router, prefix=settings.API_PREFIX, dependencies=protected)
 
 app.include_router(iot_router, prefix=settings.API_PREFIX)
 

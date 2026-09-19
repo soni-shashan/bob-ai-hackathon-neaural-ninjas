@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Search,
@@ -11,11 +11,16 @@ import {
   ExternalLink,
   PlusCircle,
   CheckCircle2,
-  X
+  X,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  AlertTriangle,
+  FileCheck2
 } from 'lucide-react';
 import { RiskBadge } from '../components/common/RiskBadge';
 import { LoadingSpinner, ErrorMessage } from '../components/common/LoadingSpinner';
-import { getAssets, createAsset } from '../services/api';
+import { getAssets, createAsset, downloadBulkTemplate, uploadBulkCSV, BulkUploadResponse } from '../services/api';
 import { AssetSummary, AssetListResponse } from '../types';
 
 export const AssetsPage: React.FC = () => {
@@ -41,6 +46,15 @@ export const AssetsPage: React.FC = () => {
     load_mw: 28,
     customers_affected: 8500
   });
+
+  // Bulk Upload Modal State
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkUploadResponse | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filters & Sorting State
   const [search, setSearch] = useState<string>('');
@@ -120,6 +134,59 @@ export const AssetsPage: React.FC = () => {
     }
   };
 
+  // ── Bulk Upload Handlers ──────────────────────────────────────────
+  const handleBulkTemplateDownload = async () => {
+    try {
+      await downloadBulkTemplate();
+    } catch (err: any) {
+      alert(`Template download failed: ${err.message}`);
+    }
+  };
+
+  const handleBulkFileSelect = (selectedFile: File) => {
+    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
+      setBulkError('Please select a .csv file');
+      return;
+    }
+    setBulkFile(selectedFile);
+    setBulkError(null);
+    setBulkResult(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) handleBulkFileSelect(droppedFile);
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) return;
+    setBulkUploading(true);
+    setBulkError(null);
+    setBulkResult(null);
+    try {
+      const result = await uploadBulkCSV(bulkFile);
+      setBulkResult(result);
+      if (result.created > 0) {
+        await fetchAssets();
+      }
+    } catch (err: any) {
+      setBulkError(err.message || 'Upload failed');
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
+  const resetBulkModal = () => {
+    setIsBulkModalOpen(false);
+    setBulkFile(null);
+    setBulkResult(null);
+    setBulkError(null);
+    setBulkUploading(false);
+    setIsDragOver(false);
+  };
+
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (
@@ -146,6 +213,13 @@ export const AssetsPage: React.FC = () => {
           >
             <PlusCircle className="w-3.5 h-3.5" />
             + Track New Transformer
+          </button>
+          <button
+            onClick={() => setIsBulkModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-xs font-mono font-bold text-white shadow-lg transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Bulk Upload CSV
           </button>
           <button
             onClick={fetchAssets}
@@ -536,6 +610,200 @@ export const AssetsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* BULK UPLOAD CSV MODAL */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111827] border border-[#1f2d44] rounded-lg max-w-xl w-full p-6 shadow-2xl space-y-5" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            {/* Header */}
+            <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white font-mono">
+                  Bulk Upload — CSV Import
+                </h3>
+              </div>
+              <button
+                onClick={resetBulkModal}
+                className="text-slate-400 hover:text-white font-mono text-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Step 1: Download Template */}
+            <div className="bg-[#0b0f17] border border-slate-800 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-mono text-white font-semibold">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-600 text-[10px] font-bold">1</span>
+                Download CSV Template
+              </div>
+              <p className="text-xs text-slate-400 pl-7">
+                Download the pre-formatted template, open it in Excel or Google Sheets, and fill in your transformer data. Required fields: <span className="text-amber-300">id</span>, <span className="text-amber-300">name</span>, <span className="text-amber-300">location</span>.
+              </p>
+              <div className="pl-7">
+                <button
+                  onClick={handleBulkTemplateDownload}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-mono font-bold text-white transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download gridguard_bulk_template.csv
+                </button>
+              </div>
+            </div>
+
+            {/* Step 2: Upload Filled CSV */}
+            <div className="bg-[#0b0f17] border border-slate-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-mono text-white font-semibold">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-600 text-[10px] font-bold">2</span>
+                Upload Filled CSV
+              </div>
+
+              {/* Drag & Drop Zone */}
+              <div
+                className={`pl-7 pr-2`}
+              >
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+                    isDragOver
+                      ? 'border-emerald-400 bg-emerald-950/30'
+                      : bulkFile
+                      ? 'border-emerald-600 bg-emerald-950/20'
+                      : 'border-slate-700 hover:border-slate-500 bg-[#0b0f17]'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleBulkFileSelect(f);
+                    }}
+                  />
+                  {bulkFile ? (
+                    <div className="flex items-center justify-center gap-2 text-emerald-300">
+                      <FileCheck2 className="w-5 h-5" />
+                      <span className="text-sm font-mono font-bold">{bulkFile.name}</span>
+                      <span className="text-[10px] text-slate-400">({(bulkFile.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Upload className="w-8 h-8 text-slate-500 mx-auto" />
+                      <p className="text-xs text-slate-400 font-mono">
+                        Drag & drop your CSV here, or <span className="text-cyan-400 underline">click to browse</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Upload Button */}
+              <div className="pl-7 flex items-center gap-3">
+                <button
+                  onClick={handleBulkUpload}
+                  disabled={!bulkFile || bulkUploading}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-xs font-mono font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {bulkUploading ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" />
+                      Upload & Register All
+                    </>
+                  )}
+                </button>
+                {bulkFile && !bulkUploading && (
+                  <button
+                    onClick={() => { setBulkFile(null); setBulkResult(null); setBulkError(null); }}
+                    className="text-xs text-slate-400 hover:text-white font-mono underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Error State */}
+            {bulkError && (
+              <div className="flex items-start gap-2 p-3 rounded bg-red-950/60 border border-red-800 text-red-300 text-xs font-mono">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{bulkError}</span>
+              </div>
+            )}
+
+            {/* Results Panel */}
+            {bulkResult && (
+              <div className="space-y-3">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-emerald-950/40 border border-emerald-800 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold font-mono text-emerald-400">{bulkResult.created}</div>
+                    <div className="text-[10px] text-emerald-300/70 font-mono uppercase">Created</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center border ${
+                    bulkResult.skipped > 0 ? 'bg-amber-950/40 border-amber-800' : 'bg-slate-800/40 border-slate-700'
+                  }`}>
+                    <div className={`text-2xl font-bold font-mono ${bulkResult.skipped > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                      {bulkResult.skipped}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono uppercase">Skipped</div>
+                  </div>
+                  <div className="bg-slate-800/40 border border-slate-700 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold font-mono text-cyan-400">{bulkResult.total_rows}</div>
+                    <div className="text-[10px] text-slate-400 font-mono uppercase">Total Rows</div>
+                  </div>
+                </div>
+
+                {/* Success Message */}
+                {bulkResult.created > 0 && (
+                  <div className="flex items-center gap-2 p-3 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs font-mono">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{bulkResult.message}</span>
+                  </div>
+                )}
+
+                {/* Error Details */}
+                {bulkResult.errors.length > 0 && (
+                  <div className="bg-[#0b0f17] border border-slate-800 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 border-b border-slate-800 text-xs font-mono text-amber-300 font-bold flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      {bulkResult.errors.length} Row(s) Skipped — Details
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {bulkResult.errors.map((err, idx) => (
+                        <div key={idx} className="px-3 py-2 border-b border-slate-800/50 text-xs font-mono flex gap-3 items-start">
+                          <span className="text-slate-500 w-12 flex-shrink-0">Row {err.row}</span>
+                          <span className="text-white font-bold w-16 flex-shrink-0">{err.id}</span>
+                          <span className="text-red-400">{err.errors.join('; ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end">
+              <button
+                onClick={resetBulkModal}
+                className="px-4 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors text-xs font-mono"
+              >
+                {bulkResult?.created ? 'Done' : 'Close'}
+              </button>
+            </div>
           </div>
         </div>
       )}

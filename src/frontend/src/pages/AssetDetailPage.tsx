@@ -127,8 +127,9 @@ export const AssetDetailPage: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Back button and Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
-        <div>
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-[#1f2d44] pb-4">
+        {/* Left: Asset Title & Metadata */}
+        <div className="space-y-1">
           <button
             onClick={() => navigate('/assets')}
             className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 mb-2 transition-colors"
@@ -137,14 +138,14 @@ export const AssetDetailPage: React.FC = () => {
             Back to Grid Fleet
           </button>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold font-mono text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold font-mono text-white tracking-tight leading-snug">
               {asset.name}
             </h1>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 flex-shrink-0">
               {asset.id}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+          <p className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
             <span>{asset.location}</span>
             <span>•</span>
             <span>{asset.type}</span>
@@ -153,51 +154,51 @@ export const AssetDetailPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: Actions & Live Risk Hero Card */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-shrink-0">
           <button
             onClick={() => navigate(`/tickets?asset_id=${asset.id}`)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-xs transition-colors shadow-lg shadow-amber-950/40 flex-shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-xs transition-colors shadow-lg shadow-amber-950/40 flex-shrink-0"
           >
             <Wrench className="w-4 h-4" />
             <span>Raise Maintenance Ticket</span>
           </button>
-        </div>
 
+          {/* Live Risk Hero Card */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 bg-[#111827] border border-[#1f2d44] p-3 rounded-lg shadow-lg flex-shrink-0">
+            <div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
+                Composite Failure Risk
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span
+                  className={`text-3xl font-extrabold font-mono tabular-nums ${
+                    riskScore >= 85 ? 'text-red-400' : riskScore >= 65 ? 'text-orange-400' : 'text-amber-400'
+                  }`}
+                >
+                  {riskScore}
+                </span>
+                <span className="text-xs text-slate-500 font-mono">/100</span>
+                <RiskBadge level={risk?.risk_level || 'CRITICAL'} size="sm" showPulse />
+              </div>
+            </div>
 
-        {/* Live Risk Hero Card */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 bg-[#111827] border border-[#1f2d44] p-3 rounded-lg shadow-lg">
-          <div>
-            <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
-              Composite Failure Risk
+            <div className="sm:border-l sm:border-slate-800 sm:pl-4">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
+                Failure Likelihood
+              </div>
+              <div className="text-2xl font-bold font-mono text-rose-400 tabular-nums">
+                {Math.round(failureProb * 100)}%
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span
-                className={`text-3xl font-extrabold font-mono tabular-nums ${
-                  riskScore >= 85 ? 'text-red-400' : riskScore >= 65 ? 'text-orange-400' : 'text-amber-400'
-                }`}
-              >
-                {riskScore}
-              </span>
-              <span className="text-xs text-slate-500 font-mono">/100</span>
-              <RiskBadge level={risk?.risk_level || 'CRITICAL'} size="sm" showPulse />
-            </div>
-          </div>
 
-          <div className="sm:border-l sm:border-slate-800 sm:pl-4">
-            <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
-              Failure Likelihood
-            </div>
-            <div className="text-2xl font-bold font-mono text-rose-400 tabular-nums">
-              {Math.round(failureProb * 100)}%
-            </div>
-          </div>
-
-          <div className="border-l border-slate-800 pl-4 hidden sm:block">
-            <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
-              Estimated Failure Window
-            </div>
-            <div className="text-xs font-mono text-amber-300 font-semibold mt-1">
-              {risk?.estimated_failure_window || 'Next 24–72 hours'}
+            <div className="border-l border-slate-800 pl-4 hidden sm:block">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
+                Estimated Failure Window
+              </div>
+              <div className="text-xs font-mono text-amber-300 font-semibold mt-1">
+                {risk?.estimated_failure_window || 'Next 24–72 hours'}
+              </div>
             </div>
           </div>
         </div>
